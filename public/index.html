@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#b51f28">
+    <meta name="description" content="Prototipo inicial del Sistema de Gestión de Convivencia Escolar de la I.E. N° 20874.">
+    <title>I.E. N° 20874 'Centro de Varones' - Sistema de Gestión de Convivencia Escolar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+      :root {
+        --school-red: #b51f28;
+        --school-red-dark: #8f1720;
+        --school-yellow: #f1c928;
+        --school-yellow-soft: #fff8d9;
+        --ink: #282624;
+        --muted: #6e6b66;
+        --line: #e7e2da;
+        --surface: #fff;
+        --canvas: #f7f5f1;
+        --success: #247647;
+        --danger: #b4232c;
+      }
+
+      body {
+        min-height: 100vh;
+        color: var(--ink);
+        background-color: var(--canvas);
+        background-image: radial-gradient(#d8d1c7 .7px, transparent .7px);
+        background-size: 18px 18px;
+        font-family: 'DM Sans', sans-serif;
+      }
+
+      h1, h2, h3, .metric-value { font-family: 'Manrope', sans-serif; }
+      .site-header { color: #fff; background: var(--school-red); border-bottom: 6px solid var(--school-yellow); }
+      .header-inner { max-width: 1200px; }
+      .school-crest { width: 76px; height: 88px; flex: 0 0 auto; object-fit: contain; padding: 4px; border-radius: 6px; background: #fff; }
+      .header-kicker { color: #ffe98a; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+      .site-header h1 { max-width: 900px; font-size: clamp(1.15rem, 2.4vw, 1.75rem); line-height: 1.25; font-weight: 800; }
+      .prototype-tag { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .6rem; border: 1px solid rgba(255,255,255,.4); border-radius: 4px; color: white; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+      .page-wrap { max-width: 1200px; }
+      .section-kicker { margin-bottom: .25rem; color: var(--school-red); font-size: .7rem; font-weight: 800; text-transform: uppercase; }
+      .section-heading { margin: 0; font-size: 1.1rem; font-weight: 800; }
+      .dashboard-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+      .metric-card, .panel { border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+      .metric-card { min-height: 112px; display: flex; align-items: center; gap: 14px; padding: 18px; }
+      .metric-icon { width: 44px; height: 44px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 6px; background: var(--school-yellow-soft); color: var(--school-red); font-size: 1.2rem; }
+      .metric-label { color: var(--muted); font-size: .78rem; }
+      .metric-value { margin-top: 2px; font-size: 1.4rem; font-weight: 800; line-height: 1.2; }
+      .panel { padding: 22px; }
+      .form-label { color: #45413d; font-size: .82rem; font-weight: 700; }
+      .form-control, .form-select { min-height: 43px; border-color: #d8d2c8; border-radius: 5px; font-size: .9rem; }
+      .form-control:focus, .form-select:focus { border-color: var(--school-red); box-shadow: 0 0 0 .2rem rgba(181,31,40,.12); }
+      textarea.form-control { min-height: 88px; resize: vertical; }
+      .btn-school { min-height: 43px; color: #241e0d; border-color: var(--school-yellow); background: var(--school-yellow); font-weight: 800; }
+      .btn-school:hover, .btn-school:focus-visible { color: #241e0d; border-color: #e5b914; background: #e5b914; }
+      .btn-outline-school { color: var(--school-red); border-color: #d4a5a5; font-weight: 700; }
+      .btn-outline-school:hover { color: white; border-color: var(--school-red); background: var(--school-red); }
+      .health-badge { display: inline-flex; align-items: center; gap: .45rem; padding: .4rem .65rem; border: 1px solid #ddd; border-radius: 99px; font-size: .78rem; font-weight: 800; }
+      .health-badge::before { width: 8px; height: 8px; border-radius: 50%; background: currentColor; content: ''; }
+      .health-badge.online { color: var(--success); border-color: #b7d6c2; background: #eff8f1; }
+      .health-badge.offline { color: var(--danger); border-color: #e8bfc0; background: #fff2f1; }
+      .health-badge.checking { color: #80651b; border-color: #eadca2; background: #fff9dc; }
+      .last-check { color: var(--muted); font-size: .78rem; }
+      .alert { border-radius: 5px; }
+      .table { --bs-table-bg: transparent; margin: 0; }
+      .table thead th { color: #6e6254; background: #fff9e5; border-bottom-color: #e7d99d; font-size: .7rem; text-transform: uppercase; white-space: nowrap; }
+      .table td { max-width: 320px; vertical-align: middle; }
+      .level-chip { display: inline-block; padding: .25rem .5rem; border-radius: 4px; background: #f2efe8; font-size: .78rem; font-weight: 700; }
+      .fault-chip { display: inline-block; padding: .25rem .5rem; border-radius: 4px; color: #7d2523; background: #fce9e5; font-size: .76rem; font-weight: 800; }
+      .status-chip { color: #775d12; background: #fff3c4; }
+      .table-empty { color: var(--muted); }
+      .prototype-note { color: var(--muted); font-size: .77rem; }
+
+      @media (max-width: 767.98px) {
+        .dashboard-grid { grid-template-columns: 1fr; gap: 9px; }
+        .metric-card { min-height: 82px; padding: 13px 16px; }
+        .metric-icon { width: 40px; height: 40px; }
+        .metric-value { font-size: 1.2rem; }
+        .panel { padding: 16px; }
+        .school-crest { width: 60px; height: 70px; }
+        .prototype-tag { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner py-3 d-flex align-items-center gap-3">
+        <img class="school-crest" src="/images/images.jpg" alt="Escudo de la I.E. N° 20874 Centro de Varones">
+        <div class="flex-grow-1">
+          <div class="header-kicker mb-1">San Vicente de Cañete</div>
+          <h1 class="mb-0">I.E. N° 20874 'Centro de Varones' - Sistema de Gestión de Convivencia Escolar</h1>
+        </div>
+        <span class="prototype-tag"><i class="bi bi-tools" aria-hidden="true"></i> Prototipo inicial</span>
+      </div>
+    </header>
+
+    <main class="container page-wrap py-4 py-lg-5">
+      <section aria-label="Métricas rápidas" class="dashboard-grid mb-4">
+        <article class="metric-card">
+          <span class="metric-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
+          <div><div class="metric-label">Casos Registrados Hoy</div><div id="today-count" class="metric-value" aria-live="polite">0</div></div>
+        </article>
+        <article class="metric-card">
+          <span class="metric-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
+          <div><div class="metric-label">Pendientes de Atención</div><div id="pending-count" class="metric-value" aria-live="polite">0</div></div>
+        </article>
+        <article class="metric-card">
+          <span class="metric-icon"><i class="bi bi-hdd-network" aria-hidden="true"></i></span>
+          <div><div class="metric-label">Estado del Servidor</div><div id="server-metric" class="metric-value">Revisando...</div></div>
+        </article>
+      </section>
+
+      <section aria-labelledby="health-heading" class="panel mb-4">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+          <div>
+            <div class="section-kicker">Conectividad</div>
+            <h2 id="health-heading" class="section-heading mb-2">Estado del sistema</h2>
+            <span id="health-badge" class="health-badge checking" role="status" aria-live="polite">Pendiente de comprobación</span>
+            <div id="last-check" class="last-check mt-2">Última verificación: todavía no realizada</div>
+          </div>
+          <button id="check-health" class="btn btn-outline-school px-3" type="button">
+            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Comprobar Conexión
+          </button>
+        </div>
+      </section>
+
+      <section aria-labelledby="form-heading" class="mb-4">
+        <div class="mb-3">
+          <div class="section-kicker">Demostración local</div>
+          <h2 id="form-heading" class="section-heading">Registro rápido de prueba</h2>
+        </div>
+        <form id="record-form" class="panel" novalidate>
+          <div class="row g-3">
+            <div class="col-12 col-sm-6 col-lg-3">
+              <label for="record-date" class="form-label">Fecha</label>
+              <input id="record-date" name="date" class="form-control" type="date" required>
+              <div class="invalid-feedback">Selecciona una fecha.</div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+              <label for="record-grade" class="form-label">Nivel / Grado</label>
+              <input id="record-grade" name="grade" class="form-control" type="text" maxlength="60" placeholder="Ej. 2° Secundaria" required>
+              <div class="invalid-feedback">Ingresa el nivel o grado.</div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+              <label for="record-type" class="form-label">Tipo de Falta</label>
+              <select id="record-type" name="type" class="form-select" required>
+                <option value="" selected disabled>Seleccionar</option>
+                <option value="Leve">Leve</option>
+                <option value="Grave">Grave</option>
+              </select>
+              <div class="invalid-feedback">Selecciona un tipo de falta.</div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+              <label for="record-description" class="form-label">Descripción breve</label>
+              <input id="record-description" name="description" class="form-control" type="text" maxlength="180" placeholder="Detalle de demostración" required>
+              <div class="invalid-feedback">Escribe una descripción breve.</div>
+            </div>
+            <div class="col-12 d-flex flex-column flex-sm-row align-items-sm-center gap-3 pt-1">
+              <button class="btn btn-school px-3" type="submit"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Guardar Registro Temporal</button>
+              <p class="prototype-note mb-0">Datos de demostración en este navegador; no se envían al servidor.</p>
+            </div>
+          </div>
+        </form>
+        <div id="success-alert" class="alert alert-success mt-3 mb-0 d-none" role="status" aria-live="polite"></div>
+      </section>
+
+      <section aria-labelledby="recent-heading">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+          <div>
+            <div class="section-kicker">Datos temporales</div>
+            <h2 id="recent-heading" class="section-heading">Registros recientes</h2>
+          </div>
+          <span id="record-total" class="prototype-note">0 registros de demostración</span>
+        </div>
+        <div class="panel p-0 overflow-hidden">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead><tr><th scope="col">N°</th><th scope="col">Fecha</th><th scope="col">Grado</th><th scope="col">Falta</th><th scope="col">Detalle</th><th scope="col">Estado</th></tr></thead>
+              <tbody id="record-rows"></tbody>
+            </table>
+          </div>
+          <div id="empty-records" class="table-empty px-3 py-4 text-center small">Aún no hay registros temporales.</div>
+        </div>
+      </section>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
