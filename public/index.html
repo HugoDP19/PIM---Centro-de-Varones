@@ -1,17 +1,17 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#b51f28">
     <meta name="description" content="Prototipo inicial del Sistema de Gestión de Convivencia Escolar de la I.E. N° 20874.">
     <title>I.E. N° 20874 'Centro de Varones' - Sistema de Gestión de Convivencia Escolar</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="/estilo.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/estilo.css">
   </head>
   <body>
     <header class="site-header">
@@ -21,23 +21,41 @@
           <div class="header-kicker mb-1">San Vicente de Cañete</div>
           <h1 class="mb-0">I.E. N° 20874 'Centro de Varones' - Sistema de Gestión de Convivencia Escolar</h1>
         </div>
-        <span class="prototype-tag"><i class="bi bi-tools" aria-hidden="true"></i> Prototipo inicial</span>
+        <span class="prototype-tag">
+          <i class="bi bi-tools" aria-hidden="true"></i>
+          Prototipo inicial
+        </span>
       </div>
     </header>
 
     <main class="container page-wrap py-4 py-lg-5">
       <section aria-label="Métricas rápidas" class="dashboard-grid mb-4">
         <article class="metric-card">
-          <span class="metric-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
-          <div><div class="metric-label">Casos Registrados Hoy</div><div id="today-count" class="metric-value" aria-live="polite">0</div></div>
+          <span class="metric-icon">
+            <i class="bi bi-calendar2-check" aria-hidden="true"></i>
+          </span>
+          <div>
+            <div class="metric-label">Casos Registrados Hoy</div>
+            <div id="today-count" class="metric-value" aria-live="polite">0</div>
+          </div>
         </article>
         <article class="metric-card">
-          <span class="metric-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
-          <div><div class="metric-label">Pendientes de Atención</div><div id="pending-count" class="metric-value" aria-live="polite">0</div></div>
+          <span class="metric-icon">
+            <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+          </span>
+          <div>
+            <div class="metric-label">Pendientes de Atención</div>
+            <div id="pending-count" class="metric-value" aria-live="polite">0</div>
+          </div>
         </article>
         <article class="metric-card">
-          <span class="metric-icon"><i class="bi bi-hdd-network" aria-hidden="true"></i></span>
-          <div><div class="metric-label">Estado del Servidor</div><div id="server-metric" class="metric-value">Revisando...</div></div>
+          <span class="metric-icon">
+            <i class="bi bi-hdd-network" aria-hidden="true"></i>
+          </span>
+          <div>
+            <div class="metric-label">Estado del Servidor</div>
+            <div id="server-metric" class="metric-value">Revisando...</div>
+          </div>
         </article>
       </section>
 
@@ -50,7 +68,8 @@
             <div id="last-check" class="last-check mt-2">Última verificación: todavía no realizada</div>
           </div>
           <button id="check-health" class="btn btn-outline-school px-3" type="button">
-            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Comprobar Conexión
+            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>
+            Comprobar Conexión
           </button>
         </div>
       </section>
@@ -87,7 +106,10 @@
               <div class="invalid-feedback">Escribe una descripción breve.</div>
             </div>
             <div class="col-12 d-flex flex-column flex-sm-row align-items-sm-center gap-3 pt-1">
-              <button class="btn btn-school px-3" type="submit"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Guardar Registro Temporal</button>
+              <button class="btn btn-school px-3" type="submit">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                Guardar Registro Temporal
+              </button>
               <p class="prototype-note mb-0">Datos de demostración en este navegador; no se envían al servidor.</p>
             </div>
           </div>
@@ -106,7 +128,16 @@
         <div class="panel p-0 overflow-hidden">
           <div class="table-responsive">
             <table class="table table-hover align-middle">
-              <thead><tr><th scope="col">N°</th><th scope="col">Fecha</th><th scope="col">Grado</th><th scope="col">Falta</th><th scope="col">Detalle</th><th scope="col">Estado</th></tr></thead>
+              <thead>
+                <tr>
+                  <th scope="col">N°</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Grado</th>
+                  <th scope="col">Falta</th>
+                  <th scope="col">Detalle</th>
+                  <th scope="col">Estado</th>
+                </tr>
+              </thead>
               <tbody id="record-rows"></tbody>
             </table>
           </div>
