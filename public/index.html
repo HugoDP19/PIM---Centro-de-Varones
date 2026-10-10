@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#b51f28">
-    <meta name="description" content="Prototipo inicial del Sistema de Gestión de Convivencia Escolar de la I.E. N° 20874.">
-    <title>I.E. N° 20874 'Centro de Varones' - Sistema de Gestión de Convivencia Escolar</title>
+    <meta name="description" content="    Sistema de Gestión de Convivencia Escolar de la I.E.P. N.° 20874 'Centro de Varones'.">
+        <title>I.E.P. N.° 20874 'Centro de Varones' - Sistema de Gestión de Convivencia Escolar</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -15,18 +15,14 @@
     <link rel="stylesheet" href="/estilo.css">
   </head>
   <body>
-    <!-- Identificación de la institución y del prototipo. -->
+    <!-- Identificación de la institución. -->
     <header class="site-header">
       <div class="container header-inner py-3 d-flex align-items-center gap-3">
-        <img class="school-crest" src="/images/images.jpg" alt="Escudo de la I.E. N° 20874 Centro de Varones">
+        <img class="school-crest" src="/images/images.jpg" alt="Escudo de la I.E.P. N.° 20874 Centro de Varones">
         <div class="flex-grow-1">
           <div class="header-kicker mb-1">San Vicente de Cañete</div>
-          <h1 class="mb-0">I.E. N° 20874 'Centro de Varones' - Sistema de Gestión de Convivencia Escolar</h1>
+          <h1 class="mb-0">I.E.P. N.° 20874 'Centro de Varones' - Sistema de Gestión de Convivencia Escolar</h1>
         </div>
-        <span class="prototype-tag">
-          <i class="bi bi-tools" aria-hidden="true"></i>
-          Prototipo inicial
-        </span>
       </div>
     </header>
 
@@ -51,71 +47,164 @@
             <div id="pending-count" class="metric-value" aria-live="polite">0</div>
           </div>
         </article>
-        <article class="metric-card">
-          <span class="metric-icon">
-            <i class="bi bi-hdd-network" aria-hidden="true"></i>
-          </span>
-          <div>
-            <div class="metric-label">Estado del Servidor</div>
-            <div id="server-metric" class="metric-value">Revisando...</div>
-          </div>
-        </article>
       </section>
 
-      <!-- Estado de conectividad consultado mediante el endpoint de salud. -->
-      <section aria-labelledby="health-heading" class="panel mb-4">
-        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
-          <div>
-            <div class="section-kicker">Conectividad</div>
-            <h2 id="health-heading" class="section-heading mb-2">Estado del sistema</h2>
-            <span id="health-badge" class="health-badge checking" role="status" aria-live="polite">Pendiente de comprobación</span>
-            <div id="last-check" class="last-check mt-2">Última verificación: todavía no realizada</div>
-          </div>
-          <button id="check-health" class="btn btn-outline-school px-3" type="button">
-            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>
-            Comprobar Conexión
-          </button>
-        </div>
-      </section>
-
-      <!-- Formulario de demostración; los registros se mantienen en el navegador. -->
+      <!-- Formulario de registro; por ahora los datos se guardan solo en el navegador. -->
       <section aria-labelledby="form-heading" class="mb-4">
         <div class="mb-3">
-          <div class="section-kicker">Demostración local</div>
-          <h2 id="form-heading" class="section-heading">Registro rápido de prueba</h2>
+          <div class="section-kicker">Convivencia escolar</div>
+          <h2 id="form-heading" class="section-heading">Registro de incidencia</h2>
         </div>
         <form id="record-form" class="panel" novalidate>
           <div class="row g-3">
-            <div class="col-12 col-sm-6 col-lg-3">
-              <label for="record-date" class="form-label">Fecha</label>
-              <input id="record-date" name="date" class="form-control" type="date" required>
-              <div class="invalid-feedback">Selecciona una fecha.</div>
+            <!-- Datos generales del caso -->
+            <div class="col-12"><h3 class="form-group-title">Datos del caso</h3></div>
+            <div class="col-12 col-md-6 col-lg-3">
+              <label for="record-fecha" class="form-label">Fecha</label>
+              <input id="record-fecha" name="fechaHecho" class="form-control" type="date" required>
+              <div class="invalid-feedback">Selecciona una fecha que no sea futura.</div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3">
-              <label for="record-grade" class="form-label">Nivel / Grado</label>
-              <input id="record-grade" name="grade" class="form-control" type="text" maxlength="60" placeholder="Ej. 2° Secundaria" required>
-              <div class="invalid-feedback">Ingresa el nivel o grado.</div>
+            <div class="col-12 col-md-6 col-lg-3">
+              <label for="record-hora" class="form-label">Hora del hecho <span class="optional-tag">(opcional)</span></label>
+              <input id="record-hora" name="horaHecho" class="form-control" type="time">
             </div>
-            <div class="col-12 col-sm-6 col-lg-3">
-              <label for="record-type" class="form-label">Tipo de Falta</label>
-              <select id="record-type" name="type" class="form-select" required>
+            <div class="col-12 col-md-6 col-lg-3">
+              <label for="record-grado" class="form-label">Nivel y grado</label>
+              <!-- Lista provisoria; luego puede cargarse desde la tabla de grados/aulas. -->
+              <select id="record-grado" name="grado" class="form-select" required>
+                <option value="" selected disabled>Seleccionar</option>
+                <optgroup label="Primaria">
+                  <option value="1° Primaria">1° Primaria</option>
+                  <option value="2° Primaria">2° Primaria</option>
+                  <option value="3° Primaria">3° Primaria</option>
+                  <option value="4° Primaria">4° Primaria</option>
+                  <option value="5° Primaria">5° Primaria</option>
+                  <option value="6° Primaria">6° Primaria</option>
+                </optgroup>
+                <optgroup label="Secundaria">
+                  <option value="1° Secundaria">1° Secundaria</option>
+                  <option value="2° Secundaria">2° Secundaria</option>
+                  <option value="3° Secundaria">3° Secundaria</option>
+                  <option value="4° Secundaria">4° Secundaria</option>
+                  <option value="5° Secundaria">5° Secundaria</option>
+                </optgroup>
+              </select>
+              <div class="invalid-feedback">Selecciona el nivel y grado.</div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+              <label for="record-tipoFalta" class="form-label">Tipo de falta</label>
+              <select id="record-tipoFalta" name="tipoFalta" class="form-select" required>
                 <option value="" selected disabled>Seleccionar</option>
                 <option value="Leve">Leve</option>
                 <option value="Grave">Grave</option>
               </select>
               <div class="invalid-feedback">Selecciona un tipo de falta.</div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3">
-              <label for="record-description" class="form-label">Descripción breve</label>
-              <input id="record-description" name="description" class="form-control" type="text" maxlength="180" placeholder="Detalle de demostración" required>
-              <div class="invalid-feedback">Escribe una descripción breve.</div>
+            <div class="col-12 col-md-6">
+              <label for="record-lugar" class="form-label">Lugar del hecho</label>
+              <select id="record-lugar" name="lugarHecho" class="form-select" required>
+                <option value="" selected disabled>Seleccionar</option>
+                <option value="Aula">Aula</option>
+                <option value="Patio">Patio</option>
+                <option value="Pasillo o escalera">Pasillo o escalera</option>
+                <option value="Servicios higiénicos">Servicios higiénicos</option>
+                <option value="Ingreso o salida">Ingreso o salida</option>
+                <option value="Fuera del colegio">Fuera del colegio</option>
+                <option value="Medios virtuales">Medios virtuales</option>
+                <option value="Otro">Otro</option>
+              </select>
+              <div class="invalid-feedback">Selecciona el lugar del hecho.</div>
+            </div>
+            <div class="col-12">
+              <label for="record-descripcion" class="form-label">Descripción del caso</label>
+              <textarea id="record-descripcion" name="descripcionHechos" class="form-control" rows="5" placeholder="Describe lo ocurrido con el mayor detalle posible" required></textarea>
+              <div class="invalid-feedback">Escribe la descripción del caso.</div>
+            </div>
+
+            <!-- Estudiantes. Más adelante se reemplazarán por un buscador de la tabla de estudiantes. -->
+            <div class="col-12 pt-2">
+              <h3 class="form-group-title">Estudiantes</h3>
+              <p class="prototype-note mt-2 mb-0">Registra al menos un estudiante: el afectado o el involucrado.</p>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="record-afectado" class="form-label">Estudiante afectado (víctima)</label>
+              <input id="record-afectado" name="estudianteAfectado" class="form-control" type="text" maxlength="100" placeholder="Apellidos y nombres">
+              <div class="invalid-feedback">Ingresa al menos un estudiante (afectado o involucrado).</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="record-involucrado" class="form-label">Estudiante involucrado (agresor)</label>
+              <input id="record-involucrado" name="estudianteInvolucrado" class="form-control" type="text" maxlength="100" placeholder="Apellidos y nombres">
+              <div class="invalid-feedback">Ingresa al menos un estudiante (afectado o involucrado).</div>
+            </div>
+            <!-- Apoderados: cada estudiante tiene el suyo. Luego pueden ser registros con DNI y teléfono. -->
+            <div class="col-12 col-md-6">
+              <label for="record-apoderado-afectado" class="form-label">Apoderado del afectado</label>
+              <input id="record-apoderado-afectado" name="apoderadoAfectado" class="form-control" type="text" maxlength="100" placeholder="Apellidos y nombres">
+              <div class="invalid-feedback">Ingresa el apoderado del estudiante afectado.</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="record-apoderado-involucrado" class="form-label">Apoderado del involucrado <span class="optional-tag">(opcional)</span></label>
+              <input id="record-apoderado-involucrado" name="apoderadoInvolucrado" class="form-control" type="text" maxlength="100" placeholder="Apellidos y nombres">
+            </div>
+            <div class="col-12">
+              <label for="record-testigos" class="form-label">Testigos <span class="optional-tag">(opcional, separados por coma)</span></label>
+              <input id="record-testigos" name="testigos" class="form-control" type="text" maxlength="180" placeholder="Ej. Juan Pérez, Prof. Rosa Díaz" autocomplete="off">
+              <!-- Se llena desde app.js: un checkbox "Confidencial" por cada testigo escrito. -->
+              <div id="testigos-confidencial" class="witness-box d-none" aria-live="polite">
+                <div class="prototype-note mb-1">Marca los testigos cuya identidad es confidencial:</div>
+                <div id="testigos-lista"></div>
+              </div>
+            </div>
+
+            <!-- Quien reporta. Más adelante vendrá del usuario que inició sesión. -->
+            <div class="col-12 pt-2"><h3 class="form-group-title">Persona que reporta</h3></div>
+            <div class="col-12 col-md-6">
+              <label for="record-reportante" class="form-label">Nombre</label>
+              <input id="record-reportante" name="nombreReportante" class="form-control" type="text" maxlength="100" placeholder="Apellidos y nombres" required>
+              <div class="invalid-feedback">Ingresa quién reporta el caso.</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="record-cargo" class="form-label">Origen del reporte</label>
+              <select id="record-cargo" name="origenReporte" class="form-select" required>
+                <option value="" selected disabled>Seleccionar</option>
+                <option value="Docente">Docente</option>
+                <option value="Tutor">Tutor</option>
+                <option value="Auxiliar">Auxiliar</option>
+                <option value="Directivo">Directivo</option>
+                <option value="Apoderado">Apoderado</option>
+                <option value="Otro">Otro</option>
+              </select>
+              <div class="invalid-feedback">Selecciona el origen del reporte.</div>
+            </div>
+
+            <!-- Seguimiento: campos opcionales que luego se completarán al atender el caso. -->
+            <div class="col-12 pt-2"><h3 class="form-group-title">Seguimiento</h3></div>
+            <div class="col-12 col-md-4">
+              <label for="record-estado" class="form-label">Estado del caso</label>
+              <select id="record-estado" name="estadoIncidencia" class="form-select" required>
+                <option value="Pendiente" selected>Pendiente</option>
+                <option value="En revisión">En revisión</option>
+                <option value="Atendido">Atendido</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-8">
+              <label for="record-medida" class="form-label">Medida disciplinaria <span class="optional-tag">(opcional)</span></label>
+              <input id="record-medida" name="medida" class="form-control" type="text" maxlength="120" placeholder="Ej. Amonestación verbal, citación al apoderado">
+            </div>
+            <div class="col-12">
+              <label for="record-observaciones" class="form-label">Observaciones <span class="optional-tag">(opcional)</span></label>
+              <textarea id="record-observaciones" name="observaciones" class="form-control" rows="2" maxlength="180" placeholder="Acuerdos, compromisos u otras notas"></textarea>
             </div>
             <div class="col-12 d-flex flex-column flex-sm-row align-items-sm-center gap-3 pt-1">
-              <button class="btn btn-school px-3" type="submit">
+              <button id="submit-button" class="btn btn-school px-3" type="submit">
                 <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-                Guardar Registro Temporal
+                <span id="submit-label">Registrar incidencia</span>
               </button>
-              <p class="prototype-note mb-0">Datos de demostración en este navegador; no se envían al servidor.</p>
+              <button id="cancel-edit" class="btn btn-outline-school px-3 d-none" type="button">
+                <i class="bi bi-x-lg me-1" aria-hidden="true"></i>
+                Cancelar edición
+              </button>
+              <p class="prototype-note mb-0">Los registros se muestran solo en este navegador y aún no se guardan en el servidor.</p>
             </div>
           </div>
         </form>
@@ -126,11 +215,12 @@
       <section aria-labelledby="recent-heading">
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
           <div>
-            <div class="section-kicker">Datos temporales</div>
+            <div class="section-kicker">Seguimiento</div>
             <h2 id="recent-heading" class="section-heading">Registros recientes</h2>
           </div>
-          <span id="record-total" class="prototype-note">0 registros de demostración</span>
+          <span id="record-total" class="prototype-note">0 registros</span>
         </div>
+        <div id="status-alert" class="alert alert-success py-2 d-none" role="status" aria-live="polite"></div>
         <div class="panel p-0 overflow-hidden">
           <div class="table-responsive">
             <table class="table table-hover align-middle">
@@ -139,15 +229,20 @@
                   <th scope="col">N°</th>
                   <th scope="col">Fecha</th>
                   <th scope="col">Grado</th>
+                  <th scope="col">Afectado</th>
+                  <th scope="col">Involucrado</th>
                   <th scope="col">Falta</th>
-                  <th scope="col">Detalle</th>
+                  <th scope="col">Lugar</th>
+                  <th scope="col">Reportado por</th>
                   <th scope="col">Estado</th>
+                  <th scope="col">Detalle</th>
+                  <th scope="col">Acciones</th>
                 </tr>
               </thead>
               <tbody id="record-rows"></tbody>
             </table>
           </div>
-          <div id="empty-records" class="table-empty px-3 py-4 text-center small">Aún no hay registros temporales.</div>
+          <div id="empty-records" class="table-empty px-3 py-4 text-center small">Aún no hay incidencias registradas.</div>
         </div>
       </section>
     </main>

@@ -27,11 +27,11 @@ h1, h2, h3, .metric-value { font-family: 'Manrope', sans-serif; }
 .school-crest { width: 76px; height: 88px; flex: 0 0 auto; object-fit: contain; padding: 4px; border-radius: 6px; background: #fff; }
 .header-kicker { color: #ffe98a; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
 .site-header h1 { max-width: 900px; font-size: clamp(1.15rem, 2.4vw, 1.75rem); line-height: 1.25; font-weight: 800; }
-.prototype-tag { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .6rem; border: 1px solid rgba(255,255,255,.4); border-radius: 4px; color: white; font-size: .75rem; font-weight: 700; white-space: nowrap; }
 .page-wrap { max-width: 1200px; }
 .section-kicker { margin-bottom: .25rem; color: var(--school-red); font-size: .7rem; font-weight: 800; text-transform: uppercase; }
 .section-heading { margin: 0; font-size: 1.1rem; font-weight: 800; }
-.dashboard-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.form-group-title { margin: 0; padding-bottom: .4rem; border-bottom: 2px solid var(--school-yellow); color: var(--school-red); font-family: 'Manrope', sans-serif; font-size: .85rem; font-weight: 800; text-transform: uppercase; }
 .metric-card, .panel { border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
 .metric-card { min-height: 112px; display: flex; align-items: center; gap: 14px; padding: 18px; }
 .metric-icon { width: 44px; height: 44px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 6px; background: var(--school-yellow-soft); color: var(--school-red); font-size: 1.2rem; }
@@ -55,11 +55,21 @@ textarea.form-control { min-height: 88px; resize: vertical; }
 .alert { border-radius: 5px; }
 .table { --bs-table-bg: transparent; margin: 0; }
 .table thead th { color: #6e6254; background: #fff9e5; border-bottom-color: #e7d99d; font-size: .7rem; text-transform: uppercase; white-space: nowrap; }
-.table td { max-width: 320px; vertical-align: middle; }
+.table-hover { --bs-table-hover-bg: #ececec; --bs-table-hover-color: #000; }
+.table td { max-width: 320px; vertical-align: middle; overflow-wrap: anywhere; }
+.status-select { min-width: 130px; min-height: 34px; margin-top: .4rem; font-size: .8rem; }
+.btn-edit { padding: .2rem .6rem; font-size: .8rem; }
 .level-chip { display: inline-block; padding: .25rem .5rem; border-radius: 4px; background: #f2efe8; font-size: .78rem; font-weight: 700; }
 .fault-chip { display: inline-block; padding: .25rem .5rem; border-radius: 4px; color: #7d2523; background: #fce9e5; font-size: .76rem; font-weight: 800; }
 .status-chip { color: #775d12; background: #fff3c4; }
 .table-empty { color: var(--muted); }
+.witness-box { margin-top: .6rem; padding: .6rem .8rem; border: 1px solid #eadca2; border-radius: 5px; background: var(--school-yellow-soft); }
+.witness-box .form-check { font-size: .85rem; }
+.optional-tag { color: var(--muted); font-size: .72rem; font-weight: 500; }
+.detail-box summary { color: var(--school-red); font-size: .8rem; font-weight: 700; cursor: pointer; }
+.detail-box dl { min-width: 260px; margin: .5rem 0 0; font-size: .8rem; }
+.detail-box dt { color: #000; font-weight: 700; }
+.detail-box dd { margin: 0 0 .4rem; color: #282624; white-space: pre-wrap; overflow-wrap: anywhere; }
 .prototype-note { color: var(--muted); font-size: .77rem; }
 
 @media (max-width: 767.98px) {
@@ -69,5 +79,4 @@ textarea.form-control { min-height: 88px; resize: vertical; }
   .metric-value { font-size: 1.2rem; }
   .panel { padding: 16px; }
   .school-crest { width: 60px; height: 70px; }
-  .prototype-tag { display: none; }
 }
