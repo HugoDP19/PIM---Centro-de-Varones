@@ -66,10 +66,9 @@ textarea.form-control { min-height: 88px; resize: vertical; }
 .witness-box { margin-top: .6rem; padding: .6rem .8rem; border: 1px solid #eadca2; border-radius: 5px; background: var(--school-yellow-soft); }
 .witness-box .form-check { font-size: .85rem; }
 .optional-tag { color: var(--muted); font-size: .72rem; font-weight: 500; }
-.detail-box summary { color: var(--school-red); font-size: .8rem; font-weight: 700; cursor: pointer; }
-.detail-box dl { min-width: 260px; margin: .5rem 0 0; font-size: .8rem; }
-.detail-box dt { color: #000; font-weight: 700; }
-.detail-box dd { margin: 0 0 .4rem; color: #282624; white-space: pre-wrap; overflow-wrap: anywhere; }
+.detail-box { margin: 0; }
+.detail-box dt { font-weight: 700; }
+.detail-box dd { margin-bottom: .75rem; }
 .prototype-note { color: var(--muted); font-size: .77rem; }
 
 @media (max-width: 767.98px) {
@@ -79,4 +78,12 @@ textarea.form-control { min-height: 88px; resize: vertical; }
   .metric-value { font-size: 1.2rem; }
   .panel { padding: 16px; }
   .school-crest { width: 60px; height: 70px; }
+}
+.nav-tabs .nav-link { color: var(--school-red); font-weight: 700; }
+.nav-tabs .nav-link.active { color: var(--school-red-dark); background: var(--surface); border-color: var(--line) var(--line) var(--surface); }
+.nav-tabs .nav-link:focus-visible { outline: 2px solid var(--school-red); outline-offset: 2px; }
+#detail-content dd { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 575.98px) {
+  .nav-tabs .nav-link { padding: .65rem .6rem; font-size: .85rem; }
+  #success-alert button { display: block; margin-top: .75rem; }
 }
