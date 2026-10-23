@@ -1,19 +1,20 @@
-// Repositorio mock: guarda las incidencias en memoria.
-// Luego se reemplazará por uno que use getPool() de src/config/db.js.
-const incidencias = [
-  { id: 1, fecha: '2026-10-05', grado: '2° Secundaria', tipoFalta: 'Leve', descripcion: 'Incidencia de prueba (dato simulado)', estado: 'Pendiente' },
-  { id: 2, fecha: '2026-10-06', grado: '3° Secundaria', tipoFalta: 'Grave', descripcion: 'Incidencia de prueba (dato simulado)', estado: 'En revisión' },
-];
-
-async function findAll() {
-  return incidencias;
+// Almacenamiento en memoria; reemplazable por un repositorio SQL Server.
+const incidencias = [];
+let siguienteId = 1;
+async function listar() { return incidencias; }
+async function obtenerPorId(id) { return incidencias.find((item) => item.id === id); }
+async function crear(campos) {
+  const registro = { ...campos, id: siguienteId++ };
+  incidencias.unshift(registro);
+  return registro;
 }
-
-async function create({ fecha, grado, tipoFalta, descripcion }) {
-  const id = incidencias.reduce((max, i) => Math.max(max, i.id), 0) + 1;
-  const nueva = { id, fecha, grado, tipoFalta, descripcion, estado: 'Pendiente' };
-  incidencias.push(nueva);
-  return nueva;
+async function actualizar(id, campos) {
+  const registro = await obtenerPorId(id);
+  if (!registro) return null;
+  Object.assign(registro, campos);
+  return registro;
 }
-
-module.exports = { findAll, create };
+async function cambiarEstado(id, estadoIncidencia, fechaUltimoCambio) {
+  return actualizar(id, { estadoIncidencia, fechaUltimoCambio });
+}
+module.exports = { listar, obtenerPorId, crear, actualizar, cambiarEstado };

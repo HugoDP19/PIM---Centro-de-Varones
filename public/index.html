@@ -27,6 +27,12 @@
     </header>
 
     <main class="container page-wrap py-4 py-lg-5">
+      <nav class="nav nav-tabs mb-4" role="tablist" aria-label="Navegación principal">
+        <button class="nav-link" id="tab-inicio" type="button" role="tab" aria-controls="inicio" aria-selected="false" tabindex="-1" data-tab="inicio">Inicio</button>
+        <button class="nav-link" id="tab-nuevo-registro" type="button" role="tab" aria-controls="nuevo-registro" aria-selected="false" tabindex="-1" data-tab="nuevo-registro">Nuevo registro</button>
+        <button class="nav-link" id="tab-registros" type="button" role="tab" aria-controls="registros" aria-selected="false" tabindex="-1" data-tab="registros">Registros</button>
+      </nav>
+      <section id="inicio" role="tabpanel" aria-labelledby="tab-inicio" tabindex="0">
       <!-- Indicadores rápidos actualizados desde app.js. -->
       <section aria-label="Métricas rápidas" class="dashboard-grid mb-4">
         <article class="metric-card">
@@ -49,8 +55,13 @@
         </article>
       </section>
 
+        <div class="d-flex flex-wrap gap-3 mb-4">
+          <button type="button" class="btn btn-school" data-go-tab="nuevo-registro">Nuevo registro</button>
+          <button type="button" class="btn btn-outline-school" data-go-tab="registros">Ver registros</button>
+        </div>
+      </section>
       <!-- Formulario de registro; por ahora los datos se guardan solo en el navegador. -->
-      <section aria-labelledby="form-heading" class="mb-4">
+      <section id="nuevo-registro" role="tabpanel" aria-labelledby="tab-nuevo-registro" tabindex="0" class="mb-4" hidden>
         <div class="mb-3">
           <div class="section-kicker">Convivencia escolar</div>
           <h2 id="form-heading" class="section-heading">Registro de incidencia</h2>
@@ -212,14 +223,25 @@
       </section>
 
       <!-- El contenido de la tabla se genera dinámicamente desde app.js. -->
-      <section aria-labelledby="recent-heading">
+      <section id="registros" role="tabpanel" aria-labelledby="tab-registros" tabindex="0" hidden>
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
           <div>
             <div class="section-kicker">Seguimiento</div>
             <h2 id="recent-heading" class="section-heading">Registros recientes</h2>
           </div>
-          <span id="record-total" class="prototype-note">0 registros</span>
+          <span id="record-total" class="prototype-note" aria-live="polite">0 de 0 registros</span>
         </div>
+        <form id="record-filters" class="panel mb-3" aria-label="Filtros de registros">
+          <div class="row g-3">
+            <div class="col-12 col-md-6"><label for="filter-text" class="form-label">Buscar afectado, involucrado, lugar o reportante</label><input id="filter-text" type="search" class="form-control"></div>
+            <div class="col-12 col-sm-6 col-lg-2"><label for="filter-estado" class="form-label">Estado</label><select id="filter-estado" class="form-select"><option value="">Todos</option></select></div>
+            <div class="col-12 col-sm-6 col-lg-2"><label for="filter-grado" class="form-label">Grado</label><select id="filter-grado" class="form-select"><option value="">Todos</option></select></div>
+            <div class="col-12 col-sm-6 col-lg-2"><label for="filter-tipo" class="form-label">Tipo de falta</label><select id="filter-tipo" class="form-select"><option value="">Todos</option></select></div>
+            <div class="col-12 col-sm-6 col-lg-3"><label for="filter-desde" class="form-label">Desde</label><input id="filter-desde" type="date" class="form-control"></div>
+            <div class="col-12 col-sm-6 col-lg-3"><label for="filter-hasta" class="form-label">Hasta</label><input id="filter-hasta" type="date" class="form-control"></div>
+            <div class="col-12"><button type="reset" class="btn btn-outline-school">Limpiar filtros</button></div>
+          </div>
+        </form>
         <div id="status-alert" class="alert alert-success py-2 d-none" role="status" aria-live="polite"></div>
         <div class="panel p-0 overflow-hidden">
           <div class="table-responsive">
@@ -235,7 +257,6 @@
                   <th scope="col">Lugar</th>
                   <th scope="col">Reportado por</th>
                   <th scope="col">Estado</th>
-                  <th scope="col">Detalle</th>
                   <th scope="col">Acciones</th>
                 </tr>
               </thead>
@@ -247,6 +268,14 @@
       </section>
     </main>
     <!-- Lógica de interacción, validación y actualización de los registros. -->
+    <div class="modal fade" id="record-detail" tabindex="-1" aria-labelledby="detail-title" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="detail-title">Detalle de incidencia</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+        <div class="modal-body"><dl id="detail-content" class="detail-box"></dl></div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-school" data-bs-dismiss="modal">Cerrar</button></div>
+      </div></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="/app.js" defer></script>
   </body>
 </html>
