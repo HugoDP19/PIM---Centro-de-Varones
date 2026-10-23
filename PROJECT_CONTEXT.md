@@ -67,6 +67,7 @@ PDF aplica la misma visibilidad que la consulta de incidencias, también para la
 
 ## Mapa de archivos
 - `database/schema.sql`: diseño físico propuesto; no ejecutar automáticamente ni confundir con Paso 5 implementado.
+- `database/Modelo C. Varones.mwb`: modelo Workbench verificado con 15 tablas y 15 figuras en EER Diagram1; conserva además un diagrama vacío. Sustituye al archivo vacío schema.sql.mwb.
 - `database/VALIDACIONES.md`: reglas retiradas de triggers y validaciones futuras de Node.js, con transacciones, concurrencia y confidencialidad; no están integradas en SQL todavía.
 - `public/index.html`: interfaz (métricas, formulario `#record-form`, tabla `#record-rows`).
 - `public/app.js`: estado, pestañas, filtros, tabla y detalle. `formulario.js`: testigos, validación y guardado. `usuarios.js`: cuentas. `api.js`: fetch/avisos y login/logout, cargado al final para recuperar sesión con toda la pantalla preparada. Cuatro scripts defer en ese orden, sin framework.
