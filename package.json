@@ -4,6 +4,7 @@
   "description": "PIM - Centro Varones API",
   "main": "src/server.js",
   "scripts": {
+    "test": "node --test test/paso3.test.js",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
   },
@@ -12,9 +13,12 @@
   },
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mssql": "^12.7.4"
   },
   "devDependencies": {

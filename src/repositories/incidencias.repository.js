@@ -14,7 +14,7 @@ async function actualizar(id, campos) {
   Object.assign(registro, campos);
   return registro;
 }
-async function cambiarEstado(id, estadoIncidencia, fechaUltimoCambio) {
-  return actualizar(id, { estadoIncidencia, fechaUltimoCambio });
+async function cambiarEstado(id, estadoIncidencia, fechaUltimoCambio, historial) {
+  return actualizar(id, { estadoIncidencia, fechaUltimoCambio, historial });
 }
 module.exports = { listar, obtenerPorId, crear, actualizar, cambiarEstado };
