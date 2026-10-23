@@ -1,4 +1,4 @@
-// Almacenamiento en memoria; reemplazable por un repositorio SQL Server.
+// Almacenamiento en memoria; reemplazable por un repositorio MySQL.
 const incidencias = [];
 let siguienteId = 1;
 async function listar() { return incidencias; }
@@ -14,7 +14,7 @@ async function actualizar(id, campos) {
   Object.assign(registro, campos);
   return registro;
 }
-async function cambiarEstado(id, estadoIncidencia, fechaUltimoCambio) {
-  return actualizar(id, { estadoIncidencia, fechaUltimoCambio });
+async function cambiarEstado(id, estadoIncidencia, fechaUltimoCambio, historial) {
+  return actualizar(id, { estadoIncidencia, fechaUltimoCambio, historial });
 }
 module.exports = { listar, obtenerPorId, crear, actualizar, cambiarEstado };

@@ -27,10 +27,23 @@
     </header>
 
     <main class="container page-wrap py-4 py-lg-5">
+      <section id="login-view" class="panel login-panel" aria-labelledby="login-heading">
+        <h2 id="login-heading" class="section-heading mb-3">Iniciar sesión</h2>
+        <form id="login-form">
+          <div class="mb-3"><label for="login-user" class="form-label">Usuario</label><input id="login-user" name="usuario" class="form-control" autocomplete="username" maxlength="40" required></div>
+          <div class="mb-3"><label for="login-password" class="form-label">Contraseña</label><input id="login-password" name="password" type="password" class="form-control" autocomplete="current-password" required></div>
+          <button type="submit" class="btn btn-school" disabled>Ingresar</button>
+        </form>
+      </section>
+      <div id="app-shell" hidden>
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div id="session-user" class="d-flex flex-wrap align-items-center gap-2"><strong id="session-name"></strong><span id="session-role" class="level-chip"></span></div><button id="logout-button" type="button" class="btn btn-outline-school">Cerrar sesión</button>
+      </div>
       <nav class="nav nav-tabs mb-4" role="tablist" aria-label="Navegación principal">
         <button class="nav-link" id="tab-inicio" type="button" role="tab" aria-controls="inicio" aria-selected="false" tabindex="-1" data-tab="inicio">Inicio</button>
         <button class="nav-link" id="tab-nuevo-registro" type="button" role="tab" aria-controls="nuevo-registro" aria-selected="false" tabindex="-1" data-tab="nuevo-registro">Nuevo registro</button>
         <button class="nav-link" id="tab-registros" type="button" role="tab" aria-controls="registros" aria-selected="false" tabindex="-1" data-tab="registros">Registros</button>
+        <button class="nav-link" id="tab-usuarios" type="button" role="tab" aria-controls="usuarios" aria-selected="false" tabindex="-1" data-tab="usuarios" hidden>Usuarios</button>
       </nav>
       <section id="inicio" role="tabpanel" aria-labelledby="tab-inicio" tabindex="0">
       <!-- Indicadores rápidos actualizados desde app.js. -->
@@ -60,7 +73,7 @@
           <button type="button" class="btn btn-outline-school" data-go-tab="registros">Ver registros</button>
         </div>
       </section>
-      <!-- Formulario de registro; por ahora los datos se guardan solo en el navegador. -->
+      <!-- Formulario conectado a la API; los datos viven en memoria del servidor. -->
       <section id="nuevo-registro" role="tabpanel" aria-labelledby="tab-nuevo-registro" tabindex="0" class="mb-4" hidden>
         <div class="mb-3">
           <div class="section-kicker">Convivencia escolar</div>
@@ -266,6 +279,23 @@
           <div id="empty-records" class="table-empty px-3 py-4 text-center small">Aún no hay incidencias registradas.</div>
         </div>
       </section>
+      <section id="usuarios" role="tabpanel" aria-labelledby="tab-usuarios" tabindex="0" hidden>
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3"><div><div class="section-kicker">Administración</div><h2 class="section-heading">Gestión de usuarios</h2></div><span id="user-total" class="prototype-note" aria-live="polite"></span></div>
+        <form id="user-form" class="panel mb-3">
+          <h3 id="user-heading" class="form-group-title mb-3">Nuevo usuario</h3>
+          <div class="row g-3">
+            <div class="col-12 col-md-6"><label for="user-name" class="form-label">Nombre completo</label><input id="user-name" name="nombre" class="form-control" maxlength="100" placeholder="Nombres y apellidos" required></div>
+            <div class="col-12 col-md-6"><label for="user-account" class="form-label">Nombre de usuario</label><input id="user-account" name="usuario" class="form-control" pattern="[a-z0-9._\-]{3,40}" maxlength="40" autocomplete="off" aria-describedby="user-account-help" required><div id="user-account-help" class="prototype-note mt-1">De 3 a 40 caracteres: minúsculas, números, punto, guion o guion bajo.</div></div>
+            <div class="col-12 col-md-6"><label for="user-role" class="form-label">Rol</label><select id="user-role" name="rol" class="form-select" required><option>Director</option><option>Coordinador de Tutoría</option><option>Auxiliar</option><option>Docente</option><option>Administrador</option></select></div>
+            <div class="col-12 col-md-6"><label id="user-password-label" for="user-password" class="form-label">Contraseña inicial</label><input id="user-password" name="password" type="password" class="form-control" minlength="12" autocomplete="new-password" aria-describedby="user-password-help" required><div id="user-password-help" class="prototype-note mt-1">Mínimo 12 caracteres.</div></div>
+            <div class="col-12"><p id="user-form-note" class="prototype-note mb-0">Las nuevas cuentas se crean activas. Puedes cambiar su estado desde la tabla.</p></div>
+            <div class="col-12 d-flex gap-2"><button type="submit" class="btn btn-school">Guardar usuario</button><button id="user-cancel" type="button" class="btn btn-outline-school" hidden>Cancelar edición</button></div>
+          </div>
+        </form>
+        <p class="prototype-note">Activar o desactivar no elimina usuarios ni sus registros. Debe quedar al menos un Administrador activo.</p>
+        <div class="panel p-0 table-responsive"><table class="table table-hover align-middle"><caption class="visually-hidden">Cuentas de usuario y acciones de administración</caption><thead><tr><th scope="col">Nombre completo</th><th scope="col">Nombre de usuario</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead><tbody id="user-rows"></tbody></table></div>
+      </section>
+      </div>
     </main>
     <!-- Lógica de interacción, validación y actualización de los registros. -->
     <div class="modal fade" id="record-detail" tabindex="-1" aria-labelledby="detail-title" aria-hidden="true">
@@ -276,6 +306,17 @@
       </div></div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+    <div class="modal fade" id="annul-modal" tabindex="-1" aria-labelledby="annul-title" aria-hidden="true">
+      <div class="modal-dialog"><div class="modal-content"><form id="annul-form">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="annul-title">Anular incidencia</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+        <div class="modal-body"><div id="annul-error" class="alert alert-danger d-none" role="alert"></div><label for="annul-reason" class="form-label">Motivo de anulación</label><textarea id="annul-reason" class="form-control" maxlength="500" required></textarea><p class="prototype-note mt-2">El registro se conservará en el historial y no podrá modificarse.</p></div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-school" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-school">Confirmar anulación</button></div>
+      </form></div></div>
+    </div>
+    <!-- Scripts de la misma pantalla, en orden: registros, formulario, usuarios y API/sesión. -->
     <script src="/app.js" defer></script>
+    <script src="/formulario.js" defer></script>
+    <script src="/usuarios.js" defer></script>
+    <script src="/api.js" defer></script>
   </body>
 </html>

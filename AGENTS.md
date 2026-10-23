@@ -20,10 +20,13 @@
 - No repitas información que ya está en el contexto.
 - Evita ejecutar comandos innecesarios.
 - Haz cambios mínimos y precisos.
+- Prefiere código sencillo y explicable para un proyecto de instituto; evita complejidad innecesaria.
 - Prefiere respuestas cortas con un resumen de los cambios.
 
 ## Desarrollo
 - Respeta la arquitectura existente.
+- MySQL 8.0.16+ es el motor del proyecto; no conectes ni migres datos sin autorización.
+- Simplifica sin quitar funcionalidades, validaciones, permisos ni seguridad.
 - Reutiliza funciones y componentes.
 - No instales dependencias sin necesidad.
 - No modifiques archivos ajenos a la tarea.
@@ -47,6 +50,11 @@ Actualízalo cuando cambien:
 - Los comandos de ejecución.
 
 No lo modifiques por cambios pequeños.
+- Redacción técnica y directa, sin emojis; documenta solo funcionalidades implementadas.
+
+## Git y avance
+- Crea commits descriptivos al terminar cambios verificados; no hagas push sin autorización.
+- No avances al siguiente paso del plan sin autorización.
 
 ## Respuestas
 Al terminar, indica brevemente:

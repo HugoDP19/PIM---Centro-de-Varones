@@ -4,6 +4,8 @@
   "description": "PIM - Centro Varones API",
   "main": "src/server.js",
   "scripts": {
+    "test": "node --test test/paso3.test.js test/pdf.test.js test/schema.test.js",
+    "test:ui": "node test/browser.cjs",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
   },
@@ -12,10 +14,14 @@
   },
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
-    "mssql": "^12.7.4"
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.24.6",
+    "pdfkit": "^0.20.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

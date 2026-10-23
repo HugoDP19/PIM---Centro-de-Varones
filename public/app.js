@@ -1,5 +1,11 @@
 // Copia de lectura de la API para representar la tabla y aplicar filtros.
 let registros = [];
+let usuarioActual = null;
+let revisionSesion = 0;
+let usuarioEditandoId = null;
+let usuarioEditandoActivo = true;
+let usuariosEnviando = false;
+let anulandoId = null;
 
 const form = document.querySelector('#record-form');
 const recordRows = document.querySelector('#record-rows');
@@ -23,7 +29,9 @@ const testigosLista = document.querySelector('#testigos-lista');
 // Navegación local: conserva los registros y permite volver con el historial.
 const tabs = [...document.querySelectorAll('[data-tab]')];
 function mostrarPestana(id, enfocar = false) {
-  const active = tabs.find((tab) => tab.dataset.tab === id) || tabs[0];
+  const disponibles = tabs.filter((tab) => !tab.hidden);
+  const active = disponibles.find((tab) => tab.dataset.tab === id) || disponibles[0];
+  if (!active) return;
   tabs.forEach((tab) => {
     const selected = tab === active;
     tab.classList.toggle('active', selected);
@@ -34,17 +42,19 @@ function mostrarPestana(id, enfocar = false) {
   if (location.hash !== `#${active.dataset.tab}`) location.hash = active.dataset.tab;
   if (enfocar) active.focus();
 }
-tabs.forEach((tab, index) => {
+tabs.forEach((tab) => {
   tab.addEventListener('click', () => mostrarPestana(tab.dataset.tab));
   tab.addEventListener('keydown', (event) => {
+    const disponibles = tabs.filter((item) => !item.hidden);
+    const index = disponibles.indexOf(tab);
     let next;
-    if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
-    if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+    if (event.key === 'ArrowRight') next = (index + 1) % disponibles.length;
+    if (event.key === 'ArrowLeft') next = (index + disponibles.length - 1) % disponibles.length;
     if (event.key === 'Home') next = 0;
-    if (event.key === 'End') next = tabs.length - 1;
+    if (event.key === 'End') next = disponibles.length - 1;
     if (next === undefined) return;
     event.preventDefault();
-    mostrarPestana(tabs[next].dataset.tab, true);
+    mostrarPestana(disponibles[next].dataset.tab, true);
   });
 });
 document.addEventListener('click', (event) => {
@@ -61,6 +71,7 @@ for (const [filter, source] of [['estado', 'record-estado'], ['grado', 'record-g
     select.append(new Option(option.textContent, option.value));
   });
 }
+document.querySelector('#filter-estado').append(new Option('Anulado', 'Anulado'));
 filters.addEventListener('submit', (event) => event.preventDefault());
 filters.addEventListener('input', renderRecords);
 filters.addEventListener('change', renderRecords);
@@ -127,7 +138,7 @@ const opcional = (valor) => valor || '—';
 function nombresPorRol(registro, rol) {
   const nombres = registro.involucrados
     .filter((i) => i.rol === rol)
-    .map((i) => (i.esConfidencial ? 'Testigo confidencial' : i.nombre));
+    .map((i) => (i.oculto ? 'Testigo confidencial' : i.nombre));
   return nombres.length ? nombres.join(', ') : '—';
 }
 
@@ -162,6 +173,7 @@ async function cambiarEstado(registro, nuevoEstado, select) {
 // Celda con la etiqueta del estado actual y el selector para cambiarlo.
 function statusCell(registro) {
   const cell = chipCell(registro.estadoIncidencia, 'fault-chip status-chip');
+  if (!registro.permisos.cambiarEstado) return cell;
   const select = document.createElement('select');
   select.className = 'form-select form-select-sm status-select';
   select.setAttribute('aria-label', `Cambiar estado del registro ${registro.id}`);
@@ -189,7 +201,32 @@ function actionsCell(registro) {
   view.setAttribute('data-bs-toggle', 'modal');
   view.setAttribute('data-bs-target', '#record-detail');
   view.addEventListener('click', () => mostrarDetalle(registro));
-  cell.append(view, button);
+  cell.append(view);
+  if (registro.permisos.descargarPdf) {
+    const pdf = document.createElement('button');
+    pdf.type = 'button';
+    pdf.className = 'btn btn-outline-school btn-edit me-2';
+    pdf.textContent = 'Descargar PDF';
+    pdf.dataset.downloadPdf = registro.id;
+    pdf.addEventListener('click', () => descargarPdf(registro.id, pdf));
+    cell.append(pdf);
+  }
+  if (registro.permisos.editar) cell.append(button);
+  if (registro.permisos.anular) {
+    const annul = document.createElement('button');
+    annul.type = 'button';
+    annul.className = 'btn btn-outline-school btn-edit ms-2';
+    annul.textContent = 'Anular';
+    annul.dataset.bsToggle = 'modal';
+    annul.dataset.bsTarget = '#annul-modal';
+    annul.addEventListener('click', () => {
+      anulandoId = registro.id;
+      document.querySelector('#annul-title').textContent = `Anular incidencia ${registro.id}`;
+      document.querySelector('#annul-form').reset();
+      document.querySelector('#annul-error').classList.add('d-none');
+    });
+    cell.append(annul);
+  }
   return cell;
 }
 
@@ -199,6 +236,7 @@ function mostrarDetalle(registro) {
   const lista = document.querySelector('#detail-content');
   lista.replaceChildren();
   const items = [
+    ['Registrado por', `Usuario ${registro.usuarioRegistroId}`],
     ['Fecha', formatDate(registro.fechaHecho)],
     ['Grado', registro.grado],
     ['Afectado', nombresPorRol(registro, 'Afectado')],
@@ -216,6 +254,8 @@ function mostrarDetalle(registro) {
     ['Observaciones', opcional(registro.observaciones)],
     ['Último cambio de estado', registro.fechaUltimoCambio ? formatDateTime(registro.fechaUltimoCambio) : '—'],
   ];
+  if (registro.anulacion) items.push(['Anulación', `${registro.anulacion.motivo} — Usuario ${registro.anulacion.usuarioId}, ${formatDateTime(registro.anulacion.fecha)}`]);
+  items.push(['Historial', registro.historial.map((evento) => `${evento.accion}: ${evento.estadoAnterior || '—'} → ${evento.estadoNuevo}; Usuario ${evento.usuarioId}; ${formatDateTime(evento.fecha)}${evento.motivo ? `; ${evento.motivo}` : ''}`).join('\n')]);
   items.forEach(([titulo, valor]) => {
     const dt = document.createElement('dt');
     dt.textContent = titulo;
@@ -252,240 +292,22 @@ function renderRecords() {
   updateMetrics();
 }
 
-// Separa los testigos por coma, sin vacíos ni repetidos.
-function leerNombresTestigos() {
-  const nombres = testigosInput.value.split(',').map((n) => n.trim()).filter(Boolean);
-  return [...new Set(nombres)];
-}
-
-// Marcas de confidencialidad por nombre; se conservan mientras el usuario sigue escribiendo.
-const confidenciales = new Set();
-
-// Muestra un checkbox "Confidencial" por testigo; si no hay testigos, el bloque se oculta.
-function renderTestigos() {
-  const nombres = leerNombresTestigos();
-  testigosBox.classList.toggle('d-none', nombres.length === 0);
-  testigosLista.replaceChildren();
-
-  nombres.forEach((nombre, index) => {
-    const id = `testigo-confidencial-${index}`;
-    const item = document.createElement('div');
-    item.className = 'form-check';
-
-    const check = document.createElement('input');
-    check.className = 'form-check-input';
-    check.type = 'checkbox';
-    check.id = id;
-    check.checked = confidenciales.has(nombre);
-    check.addEventListener('change', () => {
-      if (check.checked) confidenciales.add(nombre);
-      else confidenciales.delete(nombre);
-    });
-
-    const label = document.createElement('label');
-    label.className = 'form-check-label';
-    label.htmlFor = id;
-    label.textContent = `${nombre} - Confidencial`;
-
-    item.append(check, label);
-    testigosLista.append(item);
-  });
-}
-
-// Regla: al menos un estudiante (afectado o involucrado); si hay afectado, se pide su apoderado.
-function validarEstudiantes() {
-  const sinEstudiantes = !afectadoInput.value.trim() && !involucradoInput.value.trim();
-  const mensaje = sinEstudiantes ? 'Ingresa al menos un estudiante' : '';
-  afectadoInput.setCustomValidity(mensaje);
-  involucradoInput.setCustomValidity(mensaje);
-
-  const faltaApoderado = afectadoInput.value.trim() && !apoderadoAfectadoInput.value.trim();
-  apoderadoAfectadoInput.setCustomValidity(faltaApoderado ? 'Campo obligatorio' : '');
-}
-
-// Prepara el formulario: fecha de hoy como valor y como máximo permitido.
-function resetFormDefaults() {
-  fechaInput.max = getLocalDateValue();
-  fechaInput.value = getLocalDateValue();
-  confidenciales.clear();
-  renderTestigos();
-}
-
-// Vuelve al modo "crear": limpia el formulario y restaura los textos de los botones.
-function salirDeEdicion() {
-  editandoId = null;
-  form.reset();
-  form.classList.remove('was-validated');
-  resetFormDefaults();
-  submitLabel.textContent = 'Registrar incidencia';
-  cancelEditButton.classList.add('d-none');
-}
-
-// Carga un registro en el formulario para editarlo.
-function iniciarEdicion(registro) {
-  form.reset();
-  form.classList.remove('was-validated');
-  successAlert.classList.add('d-none');
-  editandoId = registro.id;
-
-  const valores = {
-    fechaHecho: registro.fechaHecho,
-    horaHecho: registro.horaHecho,
-    grado: registro.grado,
-    tipoFalta: registro.tipoFalta,
-    lugarHecho: registro.lugarHecho,
-    descripcionHechos: registro.descripcionHechos,
-    estudianteAfectado: registro.involucrados.find((i) => i.rol === 'Afectado')?.nombre,
-    estudianteInvolucrado: registro.involucrados.find((i) => i.rol === 'Agresor')?.nombre,
-    apoderadoAfectado: registro.apoderadoAfectado,
-    apoderadoInvolucrado: registro.apoderadoInvolucrado,
-    nombreReportante: registro.nombreReportante,
-    origenReporte: registro.origenReporte,
-    estadoIncidencia: registro.estadoIncidencia,
-    medida: registro.medida,
-    observaciones: registro.observaciones,
-  };
-  Object.entries(valores).forEach(([campo, valor]) => {
-    form.elements[campo].value = valor ?? '';
-  });
-
-  // Testigos: se vuelven a escribir y se restauran sus marcas de confidencialidad.
-  const testigos = registro.involucrados.filter((i) => i.rol === 'Testigo');
-  testigosInput.value = testigos.map((t) => t.nombre).join(', ');
-  confidenciales.clear();
-  testigos.filter((t) => t.esConfidencial).forEach((t) => confidenciales.add(t.nombre));
-  renderTestigos();
-
-  submitLabel.textContent = 'Actualizar registro';
-  cancelEditButton.classList.remove('d-none');
-  mostrarPestana('nuevo-registro');
-  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  afectadoInput.focus({ preventScroll: true });
-}
-
-form.addEventListener('submit', async (event) => {
+document.querySelector('#annul-form').addEventListener('submit', async (event) => {
   event.preventDefault();
-  form.classList.add('was-validated');
-
-  // Un campo obligatorio con solo espacios no cuenta como lleno.
-  form.querySelectorAll('input[type="text"][required], textarea[required]').forEach((campo) => {
-    campo.setCustomValidity(campo.value.trim() ? '' : 'Campo obligatorio');
-  });
-  validarEstudiantes();
-
-  if (!form.checkValidity()) {
-    successAlert.classList.add('d-none');
-    form.querySelector(':invalid')?.focus();
-    return;
-  }
-
-  const data = new FormData(form);
-  const texto = (campo) => String(data.get(campo) ?? '').trim();
-
-  // Lista única de involucrados con su rol; los testigos llevan su marca de confidencialidad.
-  const involucrados = [];
-  if (texto('estudianteAfectado')) {
-    involucrados.push({ rol: 'Afectado', nombre: texto('estudianteAfectado'), esConfidencial: false });
-  }
-  if (texto('estudianteInvolucrado')) {
-    involucrados.push({ rol: 'Agresor', nombre: texto('estudianteInvolucrado'), esConfidencial: false });
-  }
-  leerNombresTestigos().forEach((nombre) => {
-    involucrados.push({ rol: 'Testigo', nombre, esConfidencial: confidenciales.has(nombre) });
-  });
-
-  const campos = {
-    fechaHecho: texto('fechaHecho'),
-    horaHecho: texto('horaHecho'),
-    lugarHecho: texto('lugarHecho'),
-    nombreReportante: texto('nombreReportante'),
-    origenReporte: texto('origenReporte'),
-    descripcionHechos: texto('descripcionHechos'),
-    estadoIncidencia: texto('estadoIncidencia'),
-    involucrados,
-    // Campos de apoyo del formulario; su ubicación final depende del modelo SQL.
-    grado: texto('grado'),
-    tipoFalta: texto('tipoFalta'),
-    apoderadoAfectado: texto('apoderadoAfectado'),
-    apoderadoInvolucrado: texto('apoderadoInvolucrado'),
-    medida: texto('medida'),
-    observaciones: texto('observaciones'),
-  };
-
-  const submit = document.querySelector('#submit-button');
-  if (submit.disabled) return;
-  submit.disabled = true;
-  cancelEditButton.disabled = true;
-  successAlert.classList.add('d-none');
+  const button = event.target.querySelector('[type="submit"]');
+  if (button.disabled || anulandoId === null) return;
+  button.disabled = true;
+  document.querySelector('#annul-error').classList.add('d-none');
   try {
-    const editing = editandoId !== null;
-    const registro = await api(editing ? `/api/incidencias/${editandoId}` : '/api/incidencias', editing ? 'PUT' : 'POST', campos);
-    salirDeEdicion();
+    await api(`/api/incidencias/${anulandoId}/anular`, 'PATCH', { motivo: document.querySelector('#annul-reason').value.trim() });
+    bootstrap.Modal.getInstance(document.querySelector('#annul-modal')).hide();
     await cargarRegistros();
-    const mensaje = editing ? `Registro ${registro.id} actualizado correctamente.` : 'Incidencia registrada correctamente en el servidor.';
-    const message = document.createElement('span');
-    message.textContent = mensaje;
-    const view = document.createElement('button');
-    view.type = 'button';
-    view.className = 'btn btn-outline-school ms-sm-3';
-    view.dataset.goTab = 'registros';
-    view.textContent = 'Ver registros';
-    successAlert.replaceChildren(message, view);
-    successAlert.classList.remove('d-none');
+    showStatusMessage('Incidencia anulada. El registro y su historial se conservan.');
   } catch (error) {
     mostrarApiError(error);
-  } finally {
-    submit.disabled = false;
-    cancelEditButton.disabled = false;
+    const alert = document.querySelector('#annul-error');
+    alert.textContent = error.message;
+    alert.classList.remove('d-none');
   }
+  finally { button.disabled = false; }
 });
-
-cancelEditButton.addEventListener('click', () => {
-  salirDeEdicion();
-  mostrarPestana('registros', true);
-});
-testigosInput.addEventListener('input', renderTestigos);
-// Al escribir se limpia el aviso de validación; los campos de estudiantes se revalidan juntos.
-form.addEventListener('input', (event) => {
-  event.target.setCustomValidity?.('');
-  if (form.classList.contains('was-validated')) validarEstudiantes();
-});
-document.querySelector('#submit-button').parentElement.querySelector('.prototype-note').textContent = 'Los registros se guardan en memoria del servidor; se pierden al reiniciarlo.';
-resetFormDefaults();
-renderRecords();
-
-// Aviso global visible desde cualquiera de las tres pestañas.
-const apiNotice = document.createElement('div');
-apiNotice.className = 'alert d-none';
-apiNotice.setAttribute('role', 'status');
-apiNotice.setAttribute('aria-live', 'polite');
-document.querySelector('main').prepend(apiNotice);
-function mostrarApiError(error) {
-  apiNotice.className = 'alert alert-danger';
-  apiNotice.textContent = error.message || 'No se pudo conectar con la API.';
-}
-async function api(url, method = 'GET', body) {
-  apiNotice.className = 'alert alert-info';
-  apiNotice.textContent = method === 'GET' ? 'Cargando registros...' : 'Guardando cambios...';
-  let response;
-  try {
-    response = await fetch(url, {
-      method,
-      ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
-    });
-  } catch {
-    throw new Error('No se pudo conectar con la API. Comprueba la conexion e intenta de nuevo.');
-  }
-  const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.message || `Error de API (${response.status}).`);
-  if (method === 'GET' && !Array.isArray(data)) throw new Error('La API devolvio una lista invalida.');
-  apiNotice.className = 'alert d-none';
-  return data;
-}
-async function cargarRegistros() {
-  const data = await api('/api/incidencias');
-  registros = data;
-  renderRecords();
-}
-
-cargarRegistros().catch(mostrarApiError);
