@@ -1,6 +1,6 @@
 # SICE-Local — I.E.P. N.° 20874 «Centro de Varones»
 
-Sistema de registro y seguimiento de incidencias de convivencia escolar. Usa Node.js, Express y una interfaz HTML con Bootstrap 5 y JavaScript. Los registros, usuarios, sesiones e historiales viven en memoria del servidor y se pierden al reiniciarlo. SQL Server y la generación de PDF todavía no están implementados.
+Sistema de registro y seguimiento de incidencias de convivencia escolar. Usa Node.js, Express y una interfaz HTML con Bootstrap 5 y JavaScript. Los registros, usuarios, sesiones e historiales viven en memoria del servidor y se pierden al reiniciarlo. MySQL es el motor elegido para la persistencia futura; la conexión de los repositorios y la generación de PDF todavía no están implementadas.
 
 ## Ejecución local
 
@@ -18,19 +18,19 @@ Genera el secreto en una terminal privada y guárdalo en `.env`:
 node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
 ```
 
-`.env` no se versiona. `NODE_ENV=production` exige `APP_ORIGIN` con HTTPS y activa la cookie `Secure`. Las variables `DB_*` se conservan para el conector y la comprobación opcional de salud; la aplicación no necesita SQL Server.
+`.env` no se versiona. `NODE_ENV=production` exige `APP_ORIGIN` con HTTPS y activa la cookie `Secure`. El servidor y los repositorios en memoria no necesitan una base de datos disponible. La configuración MySQL queda preparada para después: `DB_HOST`, `DB_PORT` (3306), `DB_NAME`, `DB_USER` y `DB_PASSWORD`; usa una cuenta propia con permisos mínimos. No cambies JWT_SECRET ni SEED_PASSWORD para adaptar el motor. `.env` no se modificó: revisa sus opciones de base de datos cuando se autorice la integración.
 
 ## Acceso y permisos
 
 En cada inicio se crean cinco cuentas ficticias, con nombre completo, nombre de usuario y rol diferenciados. Todas toman inicialmente la contraseña de `SEED_PASSWORD`.
 
-| Nombre completo ficticio | Usuario | Rol |
-| --- | --- | --- |
-| Ricardo Salazar Mendoza | `director` | Director |
-| Patricia Huamán Torres | `coordinador` | Coordinador de Tutoría |
-| Jorge Quispe Ramos | `auxiliar` | Auxiliar |
-| Lucía Vargas Flores | `docente` | Docente |
-| Andrés Rojas Medina | `administrador` | Administrador |
+| Usuario | Rol |
+| --- | --- |
+| `director` | Director |
+| `coordinador` | Coordinador de Tutoría |
+| `auxiliar` | Auxiliar |
+| `docente` | Docente |
+| `administrador` | Administrador |
 
 La barra de sesión muestra el nombre completo y el rol. El Administrador crea cuentas con nombre completo, nombre de usuario, rol y contraseña inicial; quedan activas automáticamente. Puede editar esos datos y activar o desactivar cuentas desde la tabla, sin eliminar usuarios ni sus incidencias. No se permite desactivar ni cambiar de rol al último Administrador activo. Los cambios de cuenta invalidan sus sesiones; estas modificaciones también se pierden al reiniciar.
 
@@ -57,7 +57,7 @@ El login precede a las pestañas Inicio, Nuevo registro y Registros. El Administ
 
 | Método | Ruta | Función |
 | --- | --- | --- |
-| GET | `/api/health` | Estado del servidor; `?db=true` comprueba opcionalmente el conector SQL Server |
+| GET | `/api/health` | Estado del servidor; `?db=true` comprueba MySQL solo si se solicita expresamente; no necesario para usar la aplicación |
 | POST | `/api/auth/login` | Recibe `{usuario, password}` e inicia sesión |
 | GET | `/api/auth/me` | Datos públicos de la cuenta autenticada |
 | POST | `/api/auth/logout` | Revoca la sesión y elimina su cookie |
@@ -84,13 +84,17 @@ Todas las escrituras, incluido login/logout, requieren `X-SICE-Request: 1`; si e
 
 ## Estructura y pruebas
 
-`database/schema.sql` contiene el diseño físico simplificado para revisión en ERwin: 15 tablas (las 12 originales más HISTORIAL_AULA, ATENCION_MEDIDA e HISTORIAL_MEDIDA), claves y restricciones. Conserva dos índices UNIQUE filtrados para integridad; no incluye triggers ni índices adicionales de rendimiento. Las validaciones de negocio, la auditoría y la protección de históricos deberán aplicarse en Node.js mediante transacciones, según [database/VALIDACIONES.md](database/VALIDACIONES.md). Esa integración todavía no existe: actualmente los repositorios siguen en memoria.
+`database/schema.sql` prepara 15 tablas para MySQL 8.0.16+ y MySQL Workbench, todas con InnoDB y utf8mb4. Se necesita 8.0.16 o posterior porque versiones anteriores no aplican los CHECK. Conserva 15 PK, 24 FK y la unicidad necesaria para documentos, matrículas e involucrados. No incluye triggers ni crea una base de datos automáticamente.
 
-El SQL se verificó estáticamente con Microsoft ScriptDom, sin conectarse ni ejecutar sentencias. Mantiene las columnas y restricciones de sus 15 tablas; pasó de 593 a 356 líneas al separar las reglas del backend. La validación en el motor y en ERwin queda pendiente; no es una migración ni forma parte del arranque. Incluye Muy Grave y permisos multiaula como requisitos futuros, todavía no implementados en la interfaz/API.
+Las validaciones de negocio, auditoría y protección de históricos deberán aplicarse en Node.js mediante transacciones, según [database/VALIDACIONES.md](database/VALIDACIONES.md). El código único de incidencia deberá generarse en el servidor antes del INSERT. El periodo abierto de un aula se controla mediante una columna calculada y UNIQUE; los testigos externos aprovechan que MySQL admite varios NULL en UNIQUE.
 
-`public/` contiene la interfaz. `src/routes/` define endpoints, `src/controllers/` valida y coordina operaciones, `src/middlewares/auth.js` autentica y restringe roles, `src/services/incidencias.permisos.js` aplica permisos por registro y filtra testigos, y `src/repositories/` mantiene los datos en memoria. `src/config/db.js` conserva el conector mssql para la integración posterior. Dependencias añadidas para autenticación: bcryptjs, jsonwebtoken y cookie-parser.
+Cuando se autorice la integración, crea un esquema vacío en MySQL Workbench, selecciónalo y abre schema.sql para revisarlo antes de ejecutarlo. Actualmente no se ejecutó en MySQL: solo se analizó su gramática y estructura. Tampoco es una migración de datos ni forma parte del arranque. Muy Grave y permisos multiaula siguen pendientes de integrar en interfaz/API.
 
-- `npm test`: pruebas HTTP de los cinco roles, autenticación, usuarios, permisos por registro, confidencialidad y anulación. Usa secretos efímeros y datos de prueba; no lee `.env`.
+El frontend carga scripts sencillos con defer, en el orden declarado en index.html: app.js (estado, navegación, tabla y modales), formulario.js (validación, testigos y guardado), api.js (HTTP y avisos), usuarios.js (gestión de cuentas) y sesion.js (login/logout e inicio). Comparten el estado de la misma pantalla; no hay framework ni compilación.
+
+El backend conserva rutas, controladores y repositorios pequeños. `src/validators/incidencias.js` agrupa las reglas de entrada, `src/middlewares/auth.js` comprueba sesión y roles, y `src/services/incidencias.permisos.js` aplica permisos y confidencialidad por registro. `src/config/db.js` prepara un pool mysql2 reutilizable; ni importar el módulo ni iniciar el servidor abre conexiones. Solo una consulta explícita como /api/health?db=true intentaría conectar.
+
+- `npm test`: pruebas HTTP de los cinco roles, autenticación, usuarios, permisos, confidencialidad y anulación, más verificaciones estáticas del esquema. Comprueba el arranque y simula el conector de salud sin conectarse a MySQL. Usa secretos efímeros y datos de prueba; no lee `.env`.
 - `npm run test:ui`: prueba con Chrome/Edge sin ventana visible, en perfil temporal y servidor aislado. Verifica login/logout, los cinco roles, registro, edición protegida, filtros, vista móvil, anulación y usuarios. Puede indicarse otra instalación mediante `CHROME_PATH`; requiere Node.js 22 o superior.
 
 Para verificar manualmente: inicia sesión con cada cuenta y compara las acciones con la tabla de permisos; registra y edita un caso con testigo confidencial; anúlalo como supervisor y comprueba el motivo, responsable e historial. Reiniciar el servidor borra los datos y restablece las cinco cuentas semilla.

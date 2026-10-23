@@ -25,6 +25,8 @@
 
 ## Desarrollo
 - Respeta la arquitectura existente.
+- MySQL 8.0.16+ es el motor del proyecto; no conectes ni migres datos sin autorización.
+- Simplifica sin quitar funcionalidades, validaciones, permisos ni seguridad.
 - Reutiliza funciones y componentes.
 - No instales dependencias sin necesidad.
 - No modifiques archivos ajenos a la tarea.

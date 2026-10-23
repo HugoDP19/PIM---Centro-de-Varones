@@ -5,7 +5,7 @@
 Sistema de convivencia escolar de la I.E. N.° 20874 "Centro de Varones" (San Vicente de Cañete). Registra y da seguimiento a incidencias disciplinarias. Detalle técnico: README.md.
 
 ## Stack
-Node 18+, Express, dotenv, cors, nodemon, bcryptjs, jsonwebtoken y cookie-parser. Frontend en `public/` con Bootstrap 5 + JS vanilla. mssql (conector listo, sin persistencia SQL). Arquitectura: routes -> controllers -> repositories; middleware de autenticación y servicio de permisos por incidencia.
+Node 18+, Express, dotenv, cors, nodemon, bcryptjs, jsonwebtoken y cookie-parser. Frontend en `public/` con Bootstrap 5 + JS vanilla. mysql2 (pool preparado, sin consultas al iniciar ni persistencia implementada). Arquitectura: routes -> controllers -> repositories; middleware de autenticación y servicio de permisos por incidencia.
 
 ## Estado actual
 - Pasos 1–3 terminados. Login/logout, cinco roles y cuentas semilla; gestión de usuarios exclusiva del Administrador. Pestañas, filtros, métricas y modal conservados.
@@ -22,7 +22,7 @@ Paso 4 (PDF): pendiente de autorización expresa. No comenzar automáticamente.
 - [x] 2. Conectar el frontend con la API (fetch): listar, crear, editar (PUT), cambiar estado (PATCH). El repositorio sigue en memoria.
 - [x] 3. Login y roles, cinco usuarios semilla, bcryptjs, JWT httpOnly y cookie-parser; requiereLogin/requiereRol, Usuarios, protección de testigos y anulación con historial.
 - [ ] 4. PDF por incidencia: `GET /api/incidencias/:id/pdf` con pdfkit (escudo de `images/`, código del caso, pie "Generado por X, fecha y hora"), respetando el rol.
-- [ ] 5. Conectar SQL Server cuando el modelo esté cerrado: script SQL desde ERwin y repositorios con mssql. No tocar controladores ni rutas.
+- [ ] 5. Conectar MySQL cuando se autorice: script SQL revisado en MySQL Workbench y repositorios con mysql2. No tocar controladores ni rutas.
 
 ## Roles y permisos
 Roles: Director, Coordinador de Tutoría, Auxiliar, Docente, Administrador.
@@ -45,32 +45,34 @@ PDF en la matriz es un permiso planificado: todavía no existe endpoint ni botó
 - Priorizar código sencillo, ordenado y explicable para el instituto; evitar complejidad innecesaria sin quitar reglas ni funcionalidad.
 - Anular, no eliminar (menores y casos disciplinarios); queda en el historial.
 - PDF en el backend para que el servidor filtre por rol.
-- SQL Server al final, con el modelo ya cerrado.
+- MySQL es el motor definitivo; integrar persistencia solo en el Paso 5 autorizado.
 - Auxiliar y Docente crean solo en Pendiente; PUT tampoco les permite cambiar estado. Anulado es terminal para todos los roles.
 - Motivo obligatorio al anular para ambos supervisores. Historial sin copias de identidades; edición de roles sin permiso conserva en el servidor los testigos confidenciales previos.
 - JWT_SECRET obligatorio (mínimo 32 bytes), SEED_PASSWORD obligatorio (12 caracteres–72 bytes) y APP_ORIGIN exacto. Cinco cuentas: director, coordinador, auxiliar, docente, administrador; toman SEED_PASSWORD al reiniciar. Configuración: .env.example y README.
 - Sesiones de ocho horas revocables al logout y al modificar cuenta. Cookie SameSite=Strict y Secure en producción; escrituras con X-SICE-Request y validación de Origin. Límite de intentos de login; sin secretos predeterminados.
 
-## Modelo físico propuesto para ERwin (no ejecutado)
-- `database/schema.sql`: SQL Server 2016 SP1+, 15 tablas y 24 FK. Simplificado de 593 a 356 líneas: sin triggers ni los 22 índices de rendimiento; conserva dos UNIQUE filtrados necesarios y todas las columnas/restricciones de tabla. Aplicación todavía en memoria, sin conexión ni migración.
+## Modelo físico para MySQL Workbench (no ejecutado)
+- `database/schema.sql`: MySQL 8.0.16+, 15 tablas, 15 PK y 24 FK; InnoDB y utf8mb4. CHECK efectivos desde 8.0.16. Sin triggers, conexión ni migración; aplicación en memoria.
 - Documento obligatorio en USUARIO/ESTUDIANTE/APODERADO: DNI de 8 dígitos, CE o Pasaporte alfanumérico hasta 20; unicidad por tipo/número en cada entidad. Nombres completos Unicode; sin documentos ficticios. Terceros externos por nombre/tipo sin documento obligatorio.
 - Una MATRICULA por estudiante/año y apoderado principal anual. Sin aula fija en matrícula ni incidencia: INVOLUCRADO referencia matrícula; estudiante se obtiene de ella y aula de HISTORIAL_AULA a la fecha del hecho. No se duplica id_estudiante en involucrados.
 - Vigencias locales [inicio, fin), con fin exclusivo; NULL cubre el resto del año. FK compuestas garantizan igualdad de años. Al integrar SQL, Node.js deberá impedir solapamientos y cambios de aulas históricas mediante transacciones serializadas; ya no hay triggers que lo hagan.
 - ASIGNACION_AULA incluye usuario, tipo, año y vigencia. Regla futura: Auxiliar ve el historial del año de sus aulas actualmente asignadas, protegiendo participantes de otras aulas y narraciones sensibles en el backend. Esto NO está integrado aún; hoy Auxiliar ve todas.
 - Medidas individuales múltiples por involucrado. ATENCION_MEDIDA conserva atenciones con nombre/parentesco del representante como instantánea y FK opcional a APODERADO. Node.js deberá insertar cada versión en HISTORIAL_MEDIDA junto con el cambio de medida; no es automático en SQL.
 - Catálogo TIPO_INCIDENCIA configurable con Leve/Grave/Muy Grave (clasificación propia, no oficial). El código actual sigue admitiendo solo Leve/Grave: adaptar catálogo y selección en integración futura.
-- Incidencias con código único calculado SICE-id, cuatro estados, hora opcional, observaciones, autor y fechas. CHECK exige los datos de anulación; bloqueo de posteriores cambios, autor inmutable, última modificación y eventos de historial quedan a cargo de Node.js. Historial inicial permite estado anterior NULL.
-- NVARCHAR, DATE/TIME y DATETIME2(3) UTC; Node.js deberá incrementar version al editar usuarios. PK/UNIQUE conservan sus índices; se mantienen las opciones SET requeridas por código calculado e índices filtrados. Sin borrado en cascada; año repetido solo para FK compuestas.
-- Pendiente: revisión del instructor y validación real en SQL Server/ERwin. ScriptDom verifica sintaxis y referencias, no ejecuta ni valida el motor. Mínimo un estudiante por incidencia y rol elegible al asignar requieren transacción/validación futura del backend; sesiones revocables siguen en almacén servidor.
+- Incidencias con código único VARCHAR(50) que deberá generar Node.js antes de insertar (SICE- + UUID), cuatro estados, hora opcional, observaciones, autor y fechas. CHECK exige los datos de anulación; bloqueo de posteriores cambios, autor inmutable, última modificación y eventos de historial quedan a cargo de Node.js. Historial inicial permite estado anterior NULL.
+- VARCHAR/LONGTEXT utf8mb4, DATE/TIME y DATETIME(3) UTC. BOOLEAN con CHECK 0/1. UNIQUE de involucrado admite varios testigos externos NULL; periodo_abierto calculado + UNIQUE limita un aula abierta por matrícula. No hay filtros de índices ni columnas calculadas desde AUTO_INCREMENT.
+- Pendiente revisión del instructor y ejecución real en MySQL/Workbench. Gramática revisada con analizador externo temporal y estructura con pruebas Node.js; no se probó un servidor MySQL. Las reglas futuras de transacciones siguen en database/VALIDACIONES.md.
+
 
 ## Mapa de archivos
 - `database/schema.sql`: diseño físico propuesto; no ejecutar automáticamente ni confundir con Paso 5 implementado.
 - `database/VALIDACIONES.md`: reglas retiradas de triggers y validaciones futuras de Node.js, con transacciones, concurrencia y confidencialidad; no están integradas en SQL todavía.
 - `public/index.html`: interfaz (métricas, formulario `#record-form`, tabla `#record-rows`).
-- `public/app.js`: lógica del cliente (validación, render, edición, fetch y copia de lectura `registros`).
+- `public/app.js`: estado, pestañas, filtros, tabla y detalle. `formulario.js`: testigos, validación y guardado. `api.js`: fetch/avisos; `usuarios.js`: cuentas; `sesion.js`: login/logout e inicio. Scripts defer en ese orden, sin framework.
 - `public/estilo.css`: estilos (variables --school-red, etc.).
 - `src/app.js` (Express y middlewares) y `src/server.js` (arranque).
-- `src/config/db.js`: conector mssql.
+- `src/config/db.js`: pool mysql2 diferido; importar o arrancar no conecta. Health con ?db=true solo a solicitud explícita.
+- `src/validators/incidencias.js`: reglas de entrada compartidas por crear y editar.
 - `src/config/auth.js`, `roles.js`: configuración de sesión y roles; `src/middlewares/auth.js`: login requerido, roles y protección de escrituras.
 - `src/routes/auth.routes.js`, `usuarios.routes.js` y sus controladores; `src/repositories/usuarios.repository.js`, `sesiones.repository.js`: cuentas y sesiones en memoria.
 - `src/services/incidencias.permisos.js`: permisos por registro y presentación sin identidades protegidas.
@@ -80,16 +82,13 @@ PDF en la matriz es un permiso planificado: todavía no existe endpoint ni botó
 Por tarea: UI -> `public/*`; API -> routes + controllers + repositories de incidencias; login -> archivos nuevos siguiendo el mismo patrón (auth y usuarios) más un middleware; PDF -> controlador de incidencias + servicio nuevo.
 
 ## Verificación y limitaciones
-- npm test: 10 pruebas correctas, incluidas matriz de cinco roles, 400/401/403/404/409/429, autor controlado, confidencialidad, historial, revocación de sesiones y contraseñas.
+- npm test: 15 pruebas correctas de permisos de cinco roles, autenticación, usuarios, incidencias e historial; arranque real de Node, health/mysql2 simulado y estructura SQL. Sin consultas a una base real.
 - npm run test:ui: Chrome real, cinco roles, login/logout, registro, edición protegida, filtros, móvil, anulación y usuarios. node --check y git diff --check correctos.
 - Fuga de iniciarEdicion corregida. Limitaciones previstas: Auxiliar ve todas las aulas; datos y cuentas se restablecen al reiniciar. No usar con datos reales mientras falten persistencia y condiciones de despliegue revisadas.
 - Para ejecución local hay que agregar JWT_SECRET y SEED_PASSWORD privados en .env y ajustar APP_ORIGIN. No se modificó ni versionó .env. Proxy/TLS y asignación de aulas requieren configuración posterior.
 
 ## Bitácora (últimas 10)
-- 2026-10-17: contexto inicial creado (AGENTS.md + PROJECT_CONTEXT.md).
-- 2026-10-17: Paso 1 terminado; navegación, filtros y modal sin cambiar objetos ni backend. Contexto inicial recuperado del bloque B adjunto.
-- 2026-10-17: Paso 2 terminado; API completa y frontend conectado. curl: CRUD sin borrado, estados, 400/404 y campos verificados; node --check correcto. Prueba visual en navegador pendiente.
-- 2026-10-23: Paso 3 implementado y verificado por HTTP y navegador; README sin emojis, configuración y pruebas documentadas. Commits locales; sin push ni avance al Paso 4.
-- 2026-10-23: Gestión de usuarios mejorada; pruebas HTTP y Chrome correctas para cinco roles, alta activa, cambio de estado y conservación de incidencias al reactivar. Sin cambios de arquitectura ni avance al Paso 4.
-- 2026-10-23: Modelo físico de 15 tablas generado y validado estáticamente con ScriptDom; sin ejecutar SQL, tocar aplicación ni iniciar pasos 4/5. Cambios locales previos de usuario excluidos del commit.
-- 2026-10-23: SQL simplificado (593 → 356 líneas), conservando tablas/columnas/restricciones; 11 triggers y 22 índices de rendimiento retirados. Sintaxis y equivalencia de tablas comprobadas con ScriptDom; reglas futuras de Node.js documentadas, sin tocar aplicación ni ejecutar SQL.
+- 2026-10-17: pasos 1 y 2 terminados: pestañas, filtros y frontend conectado a API en memoria.
+- 2026-10-23: Paso 3 y mejora de usuarios verificados por HTTP y Chrome; autenticación, cinco roles, confidencialidad y anulación.
+- 2026-10-23: diseño de 15 tablas y reglas del backend documentados, sin ejecutar ni integrar base de datos.
+- 2026-10-23: motor definitivo MySQL, dependencia anterior sustituida por mysql2; SQL convertido para Workbench. Frontend separado por responsabilidad y validaciones de incidencias aclaradas. Pruebas aisladas, sin avanzar pasos 4/5 ni push.
