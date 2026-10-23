@@ -47,6 +47,11 @@ Actualízalo cuando cambien:
 - Los comandos de ejecución.
 
 No lo modifiques por cambios pequeños.
+- Redacción técnica y directa, sin emojis; documenta solo funcionalidades implementadas.
+
+## Git y avance
+- Crea commits descriptivos al terminar cambios verificados; no hagas push sin autorización.
+- No avances al siguiente paso del plan sin autorización.
 
 ## Respuestas
 Al terminar, indica brevemente:

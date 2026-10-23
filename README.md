@@ -1,121 +1,82 @@
-# Sistema de Convivencia Escolar - I.E.P. N.° 20874 'Centro de Varones'
+# SICE-Local — I.E.P. N.° 20874 «Centro de Varones»
 
-Este proyecto es un sistema integral para la gestión y seguimiento de la convivencia escolar en la Institución Educativa Pública N.° 20874 'Centro de Varones', ubicada en San Vicente de Cañete. El sistema permite registrar, monitorear y gestionar incidencias disciplinarias de manera digital.
+Sistema de registro y seguimiento de incidencias de convivencia escolar. Usa Node.js, Express y una interfaz HTML con Bootstrap 5 y JavaScript. Los registros, usuarios, sesiones e historiales viven en memoria del servidor y se pierden al reiniciarlo. SQL Server y la generación de PDF todavía no están implementados.
 
----
+## Ejecución local
 
-## 🚀 Estado Actual del Proyecto
+Requiere Node.js 18 o superior y npm. Las pruebas de navegador requieren Node.js 22 o superior y Chrome o Edge instalado.
 
-El proyecto se encuentra en una fase de **prototipado funcional avanzado**. Se ha implementado tanto la estructura del backend (API REST) como una interfaz de usuario interactiva (Frontend).
+1. Ejecuta `npm install`.
+2. Copia `.env.example` a `.env` si aún no existe. Si ya existe, agrega las variables nuevas sin reemplazar tu configuración.
+3. Define `JWT_SECRET` con un valor aleatorio de al menos 32 bytes y `SEED_PASSWORD` con al menos 12 caracteres y un máximo de 72 bytes. No se incluyen credenciales predeterminadas.
+4. Ajusta `APP_ORIGIN` al origen exacto desde el que abrirás la aplicación (por defecto `http://localhost:3000`) y `PORT` al puerto correspondiente.
+5. Ejecuta `npm start` o `npm run dev` para usar nodemon.
 
-> **Nota técnica:** Actualmente, el sistema utiliza almacenamiento en memoria (tanto en el frontend como en el backend) para facilitar las pruebas de interfaz y flujo de datos sin depender de una base de datos activa, aunque ya cuenta con el módulo de conexión para SQL Server preparado.
+Genera el secreto en una terminal privada y guárdalo en `.env`:
 
----
-
-## ✨ Características Principales
-
-### 🖥️ Frontend (Interfaz de Usuario)
-- **Panel de Control (Dashboard):** Indicadores rápidos que muestran el total de casos registrados hoy y los casos pendientes de atención.
-- **Formulario de Registro Completo:** Permite capturar información detallada:
-    - Datos del hecho (fecha, hora, lugar, descripción).
-    - Nivel y grado (Primaria/Secundaria).
-    - Tipo de falta (Leve/Grave).
-    - Involucrados (Estudiante afectado, estudiante agresor, apoderados, testigos).
-    - Persona que reporta y origen del reporte.
-    - Estado de la incidencia y medidas disciplinarias.
-- **Validación en Tiempo Real:** Asegura que los datos obligatorios estén presentes y que las fechas sean coherentes.
-- **Gestión de Testigos:** Opción para marcar testigos como "Confidenciales", protegiendo su identidad en el sistema.
-- **Tabla de Registros Recientes:** Visualización dinámica de las incidencias con capacidad de ver detalles expandibles y cambiar el estado directamente desde la tabla.
-- **Edición de Registros:** Permite retomar un registro existente para actualizar su información.
-
-### ⚙️ Backend (API REST)
-- **Arquitectura Modular:** Dividido en Rutas, Controladores y Repositorios para una mejor mantenibilidad.
-- **Seguridad y CORS:** Configurado para permitir peticiones desde diferentes orígenes.
-- **Gestión de Entorno:** Uso de variables de entorno para configuración flexible.
-- **Endpoints Implementados:**
-    - `Health Check`: Para verificar el estado del servidor y la conexión a la base de datos.
-    - `Incidencias`: Endpoints para listar y crear incidencias.
-
----
-
-## 🛠️ Cómo Funciona (Detalle Técnico)
-
-### Arquitectura del Sistema
-El sistema sigue un flujo de datos estándar:
-1. El **Usuario** interactúa con el formulario en el navegador (`public/index.html`).
-2. El script **Frontend** (`public/app.js`) valida los datos y los envía (o simula el envío) a la API.
-3. El **Servidor Express** (`src/app.js`) recibe la petición y la deriva al controlador correspondiente.
-4. El **Controlador** (`src/controllers/`) procesa la lógica de negocio y llama al repositorio.
-5. El **Repositorio** (`src/repositories/`) maneja el acceso a los datos (actualmente en memoria, preparado para SQL Server).
-
-### Estructura de Archivos (Con Comentarios)
-```text
-/
-├── public/                 # Archivos estáticos del Frontend
-│   ├── index.html          # Interfaz principal (Bootstrap 5)
-│   ├── estilo.css          # Estilos personalizados y variables de diseño
-│   └── app.js              # Lógica del cliente (Validación, Renderizado, Mock API)
-├── src/                    # Código fuente del Backend (Node.js)
-│   ├── app.js              # Configuración principal de Express y Middlewares
-│   ├── server.js           # Punto de entrada (levanta el servidor)
-│   ├── config/             # Configuraciones globales
-│   │   └── db.js           # Conector para SQL Server (mssql)
-│   ├── controllers/        # Lógica de respuesta a peticiones HTTP
-│   │   ├── health.controller.js
-│   │   └── incidencias.controller.js
-│   ├── repositories/       # Abstracción del acceso a datos (Patrón Repository)
-│   │   └── incidencias.repository.js
-│   └── routes/             # Definición de rutas y endpoints
-│       ├── index.js        # Enrutador principal
-│       ├── health.routes.js
-│       └── incidencias.routes.js
-├── images/                 # Recursos gráficos (Escudo institucional)
-├── .env.example            # Plantilla de variables de configuración
-└── package.json            # Dependencias y scripts del proyecto
+```sh
+node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
 ```
 
----
+`.env` no se versiona. `NODE_ENV=production` exige `APP_ORIGIN` con HTTPS y activa la cookie `Secure`. Las variables `DB_*` se conservan para el conector y la comprobación opcional de salud; la aplicación no necesita SQL Server.
 
-## 📡 API Endpoints
+## Acceso y permisos
 
-| Método | Ruta | Descripción | Comentario |
-| --- | --- | --- | --- |
-| `GET` | `/api/health` | Estado del servidor | Verifica que la API esté activa. |
-| `GET` | `/api/health?db=true` | Prueba de DB | Intenta una consulta a SQL Server. |
-| `GET` | `/api/incidencias` | Listar incidencias | Retorna la lista de casos registrados. |
-| `POST` | `/api/incidencias` | Crear incidencia | Devuelve 201; el servidor genera id y fechaUltimoCambio. |
-| `PUT` | `/api/incidencias/:id` | Editar incidencia | Reemplaza los campos del formulario; actualiza fechaUltimoCambio si cambia el estado. |
-| `PATCH` | `/api/incidencias/:id/estado` | Cambiar estado | Acepta solo estadoIncidencia y actualiza fechaUltimoCambio. |
+En cada inicio se crean cinco cuentas: `director`, `coordinador`, `auxiliar`, `docente` y `administrador`, una por rol. Todas toman inicialmente la contraseña de `SEED_PASSWORD`. El Administrador puede crear cuentas, editar nombre, usuario y rol, cambiar contraseñas y activar o desactivar usuarios. No se permite dejar el sistema sin un Administrador activo. Los cambios de cuenta invalidan sus sesiones; estas modificaciones también se pierden al reiniciar.
 
-POST y PUT reciben: fechaHecho, horaHecho, grado, tipoFalta, lugarHecho, descripcionHechos, nombreReportante, origenReporte, estadoIncidencia, involucrados [{rol, nombre, esConfidencial}], apoderadoAfectado, apoderadoInvolucrado, medida y observaciones. GET devuelve estos campos con id y fechaUltimoCambio (controlados por el servidor). Datos en memoria del servidor: se pierden al reiniciarlo.
-Errores: 400 con {message} para datos invalidos; 404 para un id inexistente en PUT/PATCH. Estados admitidos: Pendiente, En revisión y Atendido.
+| Operación | Director / Coordinador de Tutoría | Auxiliar | Docente | Administrador |
+| --- | --- | --- | --- | --- |
+| Registrar | Sí | Solo Pendiente | Solo Pendiente | No |
+| Ver incidencias | Todas | Todas provisionalmente | Solo las propias | No |
+| Editar | Cualquier incidencia no anulada | Propias y Pendiente | Propias y Pendiente | No |
+| Cambiar estado y anular | Sí | No | No | No |
+| Ver testigos confidenciales | Sí | No | No | No |
+| Gestionar usuarios | No | No | No | Sí |
 
----
+La restricción por aulas del Auxiliar queda pendiente de ASIGNACION_AULA; durante esta fase ve todas. El autor lo asigna el servidor. Los permisos se comprueban en el backend, incluso al llamar directamente a la API.
 
-## 🚀 Ejecución y Desarrollo
+Los roles sin permiso reciben los testigos protegidos sin el campo `nombre`. Al editar, el formulario omite esas entradas y el servidor conserva las identidades originales. Los supervisores pueden ver y editar esos nombres. El historial registra acciones, estados, usuario responsable y fecha; no guarda copias de identidades.
 
-### Requisitos
-- **Node.js 18+**
-- **npm** (gestor de paquetes)
+La anulación requiere un motivo de hasta 500 caracteres tanto para Director como para Coordinador. Conserva el registro, responsable, fecha e historial. Una incidencia anulada no admite edición, cambios de estado ni una segunda anulación; no existe eliminación física ni reapertura.
 
-### Instalación
-1. Clonar o descargar el proyecto.
-2. Instalar dependencias:
-   ```bash
-   npm install
-   ```
-3. Configurar entorno:
-   ```bash
-   cp .env.example .env
-   ```
+## Interfaz
 
-### Comandos
-- `npm run dev`: Inicia el servidor con **Nodemon** (reinicio automático al detectar cambios). Ideal para desarrollo.
-- `npm start`: Inicia el servidor de forma estándar.
+El login precede a las pestañas Inicio, Nuevo registro y Registros. El Administrador accede únicamente a Usuarios. Se conserva la navegación por hash y teclado, las métricas, los filtros de texto, estado, grado, tipo y fechas, y el detalle en modal. Las métricas se calculan sobre las incidencias que puede ver la cuenta actual. Las acciones disponibles dependen del permiso devuelto por el servidor.
 
----
+## API
 
-## 📝 Notas de Implementación
-- **Bootstrap 5:** Se utiliza para un diseño responsivo y moderno sin escribir CSS complejo desde cero.
-- **Interacción:** El sistema utiliza eventos de JavaScript para actualizar el DOM sin recargar la página (SPA-like behavior).
-- **Escalabilidad:** La separación en controladores y repositorios permitirá cambiar el almacenamiento de "Memoria" a "SQL Server" modificando solo la capa de repositorio.
+| Método | Ruta | Función |
+| --- | --- | --- |
+| GET | `/api/health` | Estado del servidor; `?db=true` comprueba opcionalmente el conector SQL Server |
+| POST | `/api/auth/login` | Recibe `{usuario, password}` e inicia sesión |
+| GET | `/api/auth/me` | Datos públicos de la cuenta autenticada |
+| POST | `/api/auth/logout` | Revoca la sesión y elimina su cookie |
+| GET | `/api/usuarios` | Lista usuarios; solo Administrador |
+| POST | `/api/usuarios` | Crea usuario; solo Administrador |
+| PUT | `/api/usuarios/:id` | Edita usuario; solo Administrador |
+| GET | `/api/incidencias` | Lista las incidencias autorizadas |
+| POST | `/api/incidencias` | Registra una incidencia |
+| PUT | `/api/incidencias/:id` | Edita los campos del formulario |
+| PATCH | `/api/incidencias/:id/estado` | Recibe solo `{estadoIncidencia}` |
+| PATCH | `/api/incidencias/:id/anular` | Recibe `{motivo}` y conserva el historial |
+
+POST/PUT de usuarios reciben `nombre`, `usuario`, `rol` y `activo` (booleano). `password` es obligatorio al crear y opcional al editar. Los usuarios son únicos, con 3–40 caracteres: minúsculas, números, punto, guion y guion bajo. Las contraseñas se almacenan como hashes bcrypt; nunca se devuelven hashes ni JWT en el JSON.
+
+POST/PUT de incidencias reciben `fechaHecho`, `horaHecho`, `grado`, `tipoFalta`, `lugarHecho`, `descripcionHechos`, `nombreReportante`, `origenReporte`, `estadoIncidencia`, `involucrados [{rol, nombre, esConfidencial}]`, `apoderadoAfectado`, `apoderadoInvolucrado`, `medida` y `observaciones`. El servidor controla `id`, `usuarioRegistroId`, `fechaUltimoCambio`, `historial` y `anulacion`. Los campos protegidos del GET marcados con `oculto` no deben reenviarse al editar.
+
+Los estados modificables son Pendiente, En revisión y Atendido. Anulado se asigna exclusivamente desde el endpoint de anulación. Se validan obligatorios, fechas reales no futuras, al menos un Afectado o Agresor y apoderado del afectado. Respuestas: 201 al crear, 204 al cerrar sesión, 400 por datos inválidos, 401 sin sesión válida, 403 sin permiso, 404 para un registro inexistente o no visible, 409 por usuario duplicado o incidencia anulada y 429 por exceso de intentos de login.
+
+## Seguridad de sesión
+
+JWT HS256 con emisor, audiencia y vencimiento de ocho horas en cookie `httpOnly`, `SameSite=Strict` y `Secure` en producción. Las sesiones se registran en memoria para revocarlas al cerrar sesión; los cambios de cuenta invalidan los JWT previos. La API devuelve `Cache-Control: no-store`.
+
+Todas las escrituras, incluido login/logout, requieren `X-SICE-Request: 1`; si existe `Origin`, debe coincidir con `APP_ORIGIN`. Los cuerpos se envían como JSON. La política CORS admite únicamente ese origen y se utiliza el mismo origen para frontend y API. El login limita a diez intentos por IP en quince minutos. No se configura confianza en proxies externos; debe revisarse antes de desplegar detrás de un proxy.
+
+## Estructura y pruebas
+
+`public/` contiene la interfaz. `src/routes/` define endpoints, `src/controllers/` valida y coordina operaciones, `src/middlewares/auth.js` autentica y restringe roles, `src/services/incidencias.permisos.js` aplica permisos por registro y filtra testigos, y `src/repositories/` mantiene los datos en memoria. `src/config/db.js` conserva el conector mssql para la integración posterior. Dependencias añadidas para autenticación: bcryptjs, jsonwebtoken y cookie-parser.
+
+- `npm test`: pruebas HTTP de los cinco roles, autenticación, usuarios, permisos por registro, confidencialidad y anulación. Usa secretos efímeros y datos de prueba; no lee `.env`.
+- `npm run test:ui`: prueba con Chrome/Edge sin ventana visible, en perfil temporal y servidor aislado. Verifica login/logout, los cinco roles, registro, edición protegida, filtros, vista móvil, anulación y usuarios. Puede indicarse otra instalación mediante `CHROME_PATH`; requiere Node.js 22 o superior.
+
+Para verificar manualmente: inicia sesión con cada cuenta y compara las acciones con la tabla de permisos; registra y edita un caso con testigo confidencial; anúlalo como supervisor y comprueba el motivo, responsable e historial. Reiniciar el servidor borra los datos y restablece las cinco cuentas semilla.
