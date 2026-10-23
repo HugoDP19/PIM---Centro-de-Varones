@@ -12,6 +12,9 @@
   --danger: #b4232c;
 }
 
+[hidden] { display: none !important; }
+.login-panel { max-width: 460px; margin: 0 auto; }
+
 body {
   min-height: 100vh;
   color: var(--ink);

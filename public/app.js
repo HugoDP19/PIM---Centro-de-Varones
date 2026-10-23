@@ -1,5 +1,9 @@
 // Copia de lectura de la API para representar la tabla y aplicar filtros.
 let registros = [];
+let usuarioActual = null;
+let revisionSesion = 0;
+let usuarioEditandoId = null;
+let anulandoId = null;
 
 const form = document.querySelector('#record-form');
 const recordRows = document.querySelector('#record-rows');
@@ -23,7 +27,9 @@ const testigosLista = document.querySelector('#testigos-lista');
 // Navegación local: conserva los registros y permite volver con el historial.
 const tabs = [...document.querySelectorAll('[data-tab]')];
 function mostrarPestana(id, enfocar = false) {
-  const active = tabs.find((tab) => tab.dataset.tab === id) || tabs[0];
+  const disponibles = tabs.filter((tab) => !tab.hidden);
+  const active = disponibles.find((tab) => tab.dataset.tab === id) || disponibles[0];
+  if (!active) return;
   tabs.forEach((tab) => {
     const selected = tab === active;
     tab.classList.toggle('active', selected);
@@ -34,17 +40,19 @@ function mostrarPestana(id, enfocar = false) {
   if (location.hash !== `#${active.dataset.tab}`) location.hash = active.dataset.tab;
   if (enfocar) active.focus();
 }
-tabs.forEach((tab, index) => {
+tabs.forEach((tab) => {
   tab.addEventListener('click', () => mostrarPestana(tab.dataset.tab));
   tab.addEventListener('keydown', (event) => {
+    const disponibles = tabs.filter((item) => !item.hidden);
+    const index = disponibles.indexOf(tab);
     let next;
-    if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
-    if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+    if (event.key === 'ArrowRight') next = (index + 1) % disponibles.length;
+    if (event.key === 'ArrowLeft') next = (index + disponibles.length - 1) % disponibles.length;
     if (event.key === 'Home') next = 0;
-    if (event.key === 'End') next = tabs.length - 1;
+    if (event.key === 'End') next = disponibles.length - 1;
     if (next === undefined) return;
     event.preventDefault();
-    mostrarPestana(tabs[next].dataset.tab, true);
+    mostrarPestana(disponibles[next].dataset.tab, true);
   });
 });
 document.addEventListener('click', (event) => {
@@ -61,6 +69,7 @@ for (const [filter, source] of [['estado', 'record-estado'], ['grado', 'record-g
     select.append(new Option(option.textContent, option.value));
   });
 }
+document.querySelector('#filter-estado').append(new Option('Anulado', 'Anulado'));
 filters.addEventListener('submit', (event) => event.preventDefault());
 filters.addEventListener('input', renderRecords);
 filters.addEventListener('change', renderRecords);
@@ -127,7 +136,7 @@ const opcional = (valor) => valor || '—';
 function nombresPorRol(registro, rol) {
   const nombres = registro.involucrados
     .filter((i) => i.rol === rol)
-    .map((i) => (i.esConfidencial ? 'Testigo confidencial' : i.nombre));
+    .map((i) => (i.oculto ? 'Testigo confidencial' : i.nombre));
   return nombres.length ? nombres.join(', ') : '—';
 }
 
@@ -162,6 +171,7 @@ async function cambiarEstado(registro, nuevoEstado, select) {
 // Celda con la etiqueta del estado actual y el selector para cambiarlo.
 function statusCell(registro) {
   const cell = chipCell(registro.estadoIncidencia, 'fault-chip status-chip');
+  if (!registro.permisos.cambiarEstado) return cell;
   const select = document.createElement('select');
   select.className = 'form-select form-select-sm status-select';
   select.setAttribute('aria-label', `Cambiar estado del registro ${registro.id}`);
@@ -189,7 +199,23 @@ function actionsCell(registro) {
   view.setAttribute('data-bs-toggle', 'modal');
   view.setAttribute('data-bs-target', '#record-detail');
   view.addEventListener('click', () => mostrarDetalle(registro));
-  cell.append(view, button);
+  cell.append(view);
+  if (registro.permisos.editar) cell.append(button);
+  if (registro.permisos.anular) {
+    const annul = document.createElement('button');
+    annul.type = 'button';
+    annul.className = 'btn btn-outline-school btn-edit ms-2';
+    annul.textContent = 'Anular';
+    annul.dataset.bsToggle = 'modal';
+    annul.dataset.bsTarget = '#annul-modal';
+    annul.addEventListener('click', () => {
+      anulandoId = registro.id;
+      document.querySelector('#annul-title').textContent = `Anular incidencia ${registro.id}`;
+      document.querySelector('#annul-form').reset();
+      document.querySelector('#annul-error').classList.add('d-none');
+    });
+    cell.append(annul);
+  }
   return cell;
 }
 
@@ -199,6 +225,7 @@ function mostrarDetalle(registro) {
   const lista = document.querySelector('#detail-content');
   lista.replaceChildren();
   const items = [
+    ['Registrado por', `Usuario ${registro.usuarioRegistroId}`],
     ['Fecha', formatDate(registro.fechaHecho)],
     ['Grado', registro.grado],
     ['Afectado', nombresPorRol(registro, 'Afectado')],
@@ -216,6 +243,8 @@ function mostrarDetalle(registro) {
     ['Observaciones', opcional(registro.observaciones)],
     ['Último cambio de estado', registro.fechaUltimoCambio ? formatDateTime(registro.fechaUltimoCambio) : '—'],
   ];
+  if (registro.anulacion) items.push(['Anulación', `${registro.anulacion.motivo} — Usuario ${registro.anulacion.usuarioId}, ${formatDateTime(registro.anulacion.fecha)}`]);
+  items.push(['Historial', registro.historial.map((evento) => `${evento.accion}: ${evento.estadoAnterior || '—'} → ${evento.estadoNuevo}; Usuario ${evento.usuarioId}; ${formatDateTime(evento.fecha)}${evento.motivo ? `; ${evento.motivo}` : ''}`).join('\n')]);
   items.forEach(([titulo, valor]) => {
     const dt = document.createElement('dt');
     dt.textContent = titulo;
@@ -319,10 +348,13 @@ function salirDeEdicion() {
   resetFormDefaults();
   submitLabel.textContent = 'Registrar incidencia';
   cancelEditButton.classList.add('d-none');
+  form.elements.estadoIncidencia.disabled = !esSupervisor();
+  document.querySelector('#protected-witness-note')?.remove();
 }
 
 // Carga un registro en el formulario para editarlo.
 function iniciarEdicion(registro) {
+  if (!registro.permisos.editar || document.querySelector('#submit-button').disabled) return;
   form.reset();
   form.classList.remove('was-validated');
   successAlert.classList.add('d-none');
@@ -350,11 +382,19 @@ function iniciarEdicion(registro) {
   });
 
   // Testigos: se vuelven a escribir y se restauran sus marcas de confidencialidad.
-  const testigos = registro.involucrados.filter((i) => i.rol === 'Testigo');
+  const testigos = registro.involucrados.filter((i) => i.rol === 'Testigo' && !i.oculto);
   testigosInput.value = testigos.map((t) => t.nombre).join(', ');
   confidenciales.clear();
   testigos.filter((t) => t.esConfidencial).forEach((t) => confidenciales.add(t.nombre));
   renderTestigos();
+  document.querySelector('#protected-witness-note')?.remove();
+  if (registro.involucrados.some((i) => i.oculto)) {
+    const note = document.createElement('p');
+    note.id = 'protected-witness-note';
+    note.className = 'prototype-note mt-2';
+    note.textContent = 'Testigos confidenciales protegidos: se conservarán sin cambios al guardar.';
+    testigosInput.after(note);
+  }
 
   submitLabel.textContent = 'Actualizar registro';
   cancelEditButton.classList.remove('d-none');
@@ -401,7 +441,7 @@ form.addEventListener('submit', async (event) => {
     nombreReportante: texto('nombreReportante'),
     origenReporte: texto('origenReporte'),
     descripcionHechos: texto('descripcionHechos'),
-    estadoIncidencia: texto('estadoIncidencia'),
+    estadoIncidencia: form.elements.estadoIncidencia.value,
     involucrados,
     // Campos de apoyo del formulario; su ubicación final depende del modelo SQL.
     grado: texto('grado'),
@@ -465,27 +505,173 @@ function mostrarApiError(error) {
   apiNotice.textContent = error.message || 'No se pudo conectar con la API.';
 }
 async function api(url, method = 'GET', body) {
+  const revision = revisionSesion;
   apiNotice.className = 'alert alert-info';
   apiNotice.textContent = method === 'GET' ? 'Cargando registros...' : 'Guardando cambios...';
   let response;
   try {
     response = await fetch(url, {
       method,
-      ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
+      credentials: 'same-origin',
+      headers: { ...(method !== 'GET' ? { 'X-SICE-Request': '1' } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}),
     });
   } catch {
     throw new Error('No se pudo conectar con la API. Comprueba la conexion e intenta de nuevo.');
   }
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.message || `Error de API (${response.status}).`);
-  if (method === 'GET' && !Array.isArray(data)) throw new Error('La API devolvio una lista invalida.');
+  if (revision !== revisionSesion) throw new Error('La sesión cambió. Vuelve a intentar la operación.');
+  if (!response.ok) {
+    if (response.status === 401 && url !== '/api/auth/login') cerrarVista();
+    const error = new Error(data?.message || `Error de API (${response.status}).`);
+    error.status = response.status;
+    throw error;
+  }
+  if (method === 'GET' && ['/api/incidencias', '/api/usuarios'].includes(url) && !Array.isArray(data)) throw new Error('La API devolvió una lista inválida.');
   apiNotice.className = 'alert d-none';
   return data;
 }
 async function cargarRegistros() {
+  const revision = revisionSesion;
   const data = await api('/api/incidencias');
+  if (revision !== revisionSesion || !usuarioActual) return;
   registros = data;
   renderRecords();
 }
 
-cargarRegistros().catch(mostrarApiError);
+function esSupervisor() {
+  return ['Director', 'Coordinador de Tutoría'].includes(usuarioActual?.rol);
+}
+function cerrarVista() {
+  revisionSesion++;
+  usuarioActual = null;
+  registros = [];
+  anulandoId = null;
+  salirDeEdicion();
+  resetUserForm();
+  renderRecords();
+  document.querySelector('#user-rows').replaceChildren();
+  document.querySelector('#detail-content').replaceChildren();
+  document.querySelector('#session-user').textContent = '';
+  document.querySelector('#annul-form').reset();
+  document.querySelector('#login-form').reset();
+  successAlert.classList.add('d-none');
+  statusAlert.classList.add('d-none');
+  document.querySelectorAll('.modal').forEach((modal) => bootstrap.Modal.getInstance(modal)?.hide());
+  document.querySelector('#app-shell').hidden = true;
+  document.querySelector('#login-view').hidden = false;
+  document.querySelector('#login-user').focus();
+}
+async function abrirSesion(usuario) {
+  revisionSesion++;
+  usuarioActual = usuario;
+  const admin = usuario.rol === 'Administrador';
+  tabs.forEach((tab) => { tab.hidden = admin ? tab.dataset.tab !== 'usuarios' : tab.dataset.tab === 'usuarios'; });
+  document.querySelector('#session-user').textContent = `${usuario.nombre} — ${usuario.rol}`;
+  document.querySelector('#login-view').hidden = true;
+  document.querySelector('#app-shell').hidden = false;
+  form.elements.estadoIncidencia.disabled = !esSupervisor();
+  mostrarPestana(location.hash.slice(1));
+  if (admin) await cargarUsuarios();
+  else await cargarRegistros();
+}
+document.querySelector('#login-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = event.target.querySelector('button');
+  if (button.disabled) return;
+  button.disabled = true;
+  try {
+    const usuario = await api('/api/auth/login', 'POST', { usuario: document.querySelector('#login-user').value, password: document.querySelector('#login-password').value });
+    event.target.reset();
+    await abrirSesion(usuario);
+  } catch (error) { mostrarApiError(error); }
+  finally { button.disabled = false; }
+});
+document.querySelector('#logout-button').addEventListener('click', async (event) => {
+  event.target.disabled = true;
+  try { await api('/api/auth/logout', 'POST'); cerrarVista(); }
+  catch (error) { mostrarApiError(error); }
+  finally { event.target.disabled = false; }
+});
+document.querySelector('#annul-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = event.target.querySelector('[type="submit"]');
+  if (button.disabled || anulandoId === null) return;
+  button.disabled = true;
+  document.querySelector('#annul-error').classList.add('d-none');
+  try {
+    await api(`/api/incidencias/${anulandoId}/anular`, 'PATCH', { motivo: document.querySelector('#annul-reason').value.trim() });
+    bootstrap.Modal.getInstance(document.querySelector('#annul-modal')).hide();
+    await cargarRegistros();
+    showStatusMessage('Incidencia anulada. El registro y su historial se conservan.');
+  } catch (error) {
+    mostrarApiError(error);
+    const alert = document.querySelector('#annul-error');
+    alert.textContent = error.message;
+    alert.classList.remove('d-none');
+  }
+  finally { button.disabled = false; }
+});
+function resetUserForm() {
+  usuarioEditandoId = null;
+  document.querySelector('#user-form').reset();
+  document.querySelector('#user-password').required = true;
+  document.querySelector('#user-heading').textContent = 'Nuevo usuario';
+  document.querySelector('#user-cancel').hidden = true;
+}
+async function cargarUsuarios() {
+  const revision = revisionSesion;
+  const usuarios = await api('/api/usuarios');
+  if (revision !== revisionSesion || usuarioActual?.rol !== 'Administrador') return;
+  const rows = document.querySelector('#user-rows');
+  rows.replaceChildren();
+  usuarios.forEach((usuario) => {
+    const row = document.createElement('tr');
+    const action = document.createElement('td');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-outline-school btn-edit';
+    button.textContent = 'Editar';
+    button.addEventListener('click', () => {
+      if (document.querySelector('#user-form [type="submit"]').disabled) return;
+      resetUserForm();
+      usuarioEditandoId = usuario.id;
+      for (const campo of ['nombre', 'usuario', 'rol']) document.querySelector('#user-form').elements[campo].value = usuario[campo];
+      document.querySelector('#user-active').checked = usuario.activo;
+      document.querySelector('#user-password').required = false;
+      document.querySelector('#user-heading').textContent = `Editar usuario ${usuario.id}`;
+      document.querySelector('#user-cancel').hidden = false;
+      document.querySelector('#user-name').focus();
+    });
+    action.append(button);
+    row.append(textCell(usuario.nombre), textCell(usuario.usuario), textCell(usuario.rol), textCell(usuario.activo ? 'Activo' : 'Inactivo'), action);
+    rows.append(row);
+  });
+}
+document.querySelector('#user-cancel').addEventListener('click', resetUserForm);
+document.querySelector('#user-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = event.target.querySelector('[type="submit"]');
+  if (button.disabled) return;
+  button.disabled = true;
+  const cancel = document.querySelector('#user-cancel');
+  cancel.disabled = true;
+  try {
+    const campos = Object.fromEntries(new FormData(event.target));
+    campos.activo = document.querySelector('#user-active').checked;
+    if (!campos.password && usuarioEditandoId !== null) delete campos.password;
+    const usuario = await api(usuarioEditandoId === null ? '/api/usuarios' : `/api/usuarios/${usuarioEditandoId}`, usuarioEditandoId === null ? 'POST' : 'PUT', campos);
+    resetUserForm();
+    if (usuario.id === usuarioActual.id) {
+      cerrarVista();
+      apiNotice.className = 'alert alert-info';
+      apiNotice.textContent = 'Cuenta actualizada. Inicia sesión nuevamente.';
+    } else await cargarUsuarios();
+  } catch (error) { mostrarApiError(error); }
+  finally { button.disabled = false; cancel.disabled = false; }
+});
+// Recuperar la sesión sin exponer el JWT a JavaScript.
+api('/api/auth/me').then(abrirSesion).catch((error) => {
+  if (error.status === 401) apiNotice.className = 'alert d-none';
+  else mostrarApiError(error);
+}).finally(() => { document.querySelector('#login-form button').disabled = false; });
