@@ -53,8 +53,6 @@ textarea.form-control { min-height: 88px; resize: vertical; }
 .health-badge::before { width: 8px; height: 8px; border-radius: 50%; background: currentColor; content: ''; }
 .health-badge.online { color: var(--success); border-color: #b7d6c2; background: #eff8f1; }
 .health-badge.offline { color: var(--danger); border-color: #e8bfc0; background: #fff2f1; }
-.health-badge.checking { color: #80651b; border-color: #eadca2; background: #fff9dc; }
-.last-check { color: var(--muted); font-size: .78rem; }
 .alert { border-radius: 5px; }
 .table { --bs-table-bg: transparent; margin: 0; }
 .table thead th { color: #6e6254; background: #fff9e5; border-bottom-color: #e7d99d; font-size: .7rem; text-transform: uppercase; white-space: nowrap; }

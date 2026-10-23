@@ -26,8 +26,13 @@ async function guardar(req, res) {
   // Revalidar después del hash: otra solicitud pudo cambiar usuarios mientras se calculaba.
   const duplicado = await repository.obtenerPorUsuario(campos.usuario);
   if (duplicado && duplicado.id !== id) return res.status(409).json({ message: 'El usuario ya existe' });
-  if (actual?.rol === 'Administrador' && actual.activo && (!campos.activo || campos.rol !== 'Administrador')) {
-    if (!(await repository.listar()).some((usuario) => usuario.id !== id && usuario.activo && usuario.rol === 'Administrador')) {
+  const retiraAdministrador = actual?.rol === 'Administrador' && actual.activo
+    && (!campos.activo || campos.rol !== 'Administrador');
+  if (retiraAdministrador) {
+    const usuarios = await repository.listar();
+    const quedaAdministrador = usuarios.some((usuario) => usuario.id !== id
+      && usuario.activo && usuario.rol === 'Administrador');
+    if (!quedaAdministrador) {
       return res.status(400).json({ message: 'Debe quedar al menos un Administrador activo' });
     }
   }
