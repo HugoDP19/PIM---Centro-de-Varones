@@ -50,11 +50,20 @@ PDF en la matriz es un permiso planificado: todavía no existe endpoint ni botó
 - JWT_SECRET obligatorio (mínimo 32 bytes), SEED_PASSWORD obligatorio (12 caracteres–72 bytes) y APP_ORIGIN exacto. Cinco cuentas: director, coordinador, auxiliar, docente, administrador; toman SEED_PASSWORD al reiniciar. Configuración: .env.example y README.
 - Sesiones de ocho horas revocables al logout y al modificar cuenta. Cookie SameSite=Strict y Secure en producción; escrituras con X-SICE-Request y validación de Origin. Límite de intentos de login; sin secretos predeterminados.
 
-## Modelo de datos (cambios acordados; verificar si ya están en ERwin)
-Tablas: ROL, USUARIO, ASIGNACION_AULA (nueva), AULA, MATRICULA, ESTUDIANTE, APODERADO, TIPO_INCIDENCIA, INCIDENCIA, INVOLUCRADO_INCIDENCIA, MEDIDA_DISCIPLINARIA, HISTORIAL_INCIDENCIA (nueva).
-Cambios: id_tipo pasa a INCIDENCIA; INVOLUCRADO.id_estudiante opcional + tipo_persona + nombre_persona (testigos que no son alumnos); MEDIDA.id_usuario_tutor -> id_usuario_responsable; DNI único en ESTUDIANTE, APODERADO y USUARIO; anio_academico en MATRICULA.
+## Modelo físico propuesto para ERwin (no ejecutado)
+- `database/schema.sql`: SQL Server 2016 SP1+, 15 tablas, 24 FK y 11 triggers. Conserva las 12 tablas originales y agrega HISTORIAL_AULA, ATENCION_MEDIDA e HISTORIAL_MEDIDA. Sin conexión ni migración; aplicación todavía en memoria.
+- Documento obligatorio en USUARIO/ESTUDIANTE/APODERADO: DNI de 8 dígitos, CE o Pasaporte alfanumérico hasta 20; unicidad por tipo/número en cada entidad. Nombres completos Unicode; sin documentos ficticios. Terceros externos por nombre/tipo sin documento obligatorio.
+- Una MATRICULA por estudiante/año y apoderado principal anual. Sin aula fija en matrícula ni incidencia: INVOLUCRADO referencia matrícula; estudiante se obtiene de ella y aula de HISTORIAL_AULA a la fecha del hecho. No se duplica id_estudiante en involucrados.
+- Vigencias locales [inicio, fin), con fin exclusivo; NULL cubre el resto del año. FK compuestas garantizan igualdad de años entre aula, matrícula e historial. Triggers impiden solapamientos y cambios que reasignen aulas de hechos ya registrados; traslados en una transacción.
+- ASIGNACION_AULA incluye usuario, tipo, año y vigencia. Regla futura: Auxiliar ve el historial del año de sus aulas actualmente asignadas, protegiendo participantes de otras aulas y narraciones sensibles en el backend. Esto NO está integrado aún; hoy Auxiliar ve todas.
+- Medidas individuales múltiples por involucrado. ATENCION_MEDIDA conserva varias atenciones y acuerdos con nombre/parentesco del representante como instantánea, más FK opcional a APODERADO. HISTORIAL_MEDIDA conserva versiones automáticas, evitando sobrescribir el pasado.
+- Catálogo TIPO_INCIDENCIA configurable con Leve/Grave/Muy Grave (clasificación propia, no oficial). El código actual sigue admitiendo solo Leve/Grave: adaptar catálogo y selección en integración futura.
+- Incidencias con código único calculado SICE-id, estados Pendiente/En revisión/Atendido/Anulado, hora opcional, observaciones, autor, creación y última modificación. Anulación con motivo/responsable/fecha y estado terminal; triggers auditan cabeceras y medidas. Historial inicial permite estado anterior NULL.
+- NVARCHAR, DATE/TIME y DATETIME2(3) UTC; version de usuario incrementada en cada edición. Índices para FK, permisos y vigencias; sin borrado en cascada. Año repetido solo en FK compuestas para controlar consistencia temporal.
+- Pendiente: revisión del instructor y validación real en SQL Server/ERwin. ScriptDom verifica sintaxis y referencias, no ejecuta ni valida el motor. Mínimo un estudiante por incidencia y rol elegible al asignar requieren transacción/validación futura del backend; sesiones revocables siguen en almacén servidor.
 
 ## Mapa de archivos
+- `database/schema.sql`: diseño físico propuesto; no ejecutar automáticamente ni confundir con Paso 5 implementado.
 - `public/index.html`: interfaz (métricas, formulario `#record-form`, tabla `#record-rows`).
 - `public/app.js`: lógica del cliente (validación, render, edición, fetch y copia de lectura `registros`).
 - `public/estilo.css`: estilos (variables --school-red, etc.).
@@ -80,3 +89,4 @@ Por tarea: UI -> `public/*`; API -> routes + controllers + repositories de incid
 - 2026-10-17: Paso 2 terminado; API completa y frontend conectado. curl: CRUD sin borrado, estados, 400/404 y campos verificados; node --check correcto. Prueba visual en navegador pendiente.
 - 2026-10-23: Paso 3 implementado y verificado por HTTP y navegador; README sin emojis, configuración y pruebas documentadas. Commits locales; sin push ni avance al Paso 4.
 - 2026-10-23: Gestión de usuarios mejorada; pruebas HTTP y Chrome correctas para cinco roles, alta activa, cambio de estado y conservación de incidencias al reactivar. Sin cambios de arquitectura ni avance al Paso 4.
+- 2026-10-23: Modelo físico de 15 tablas generado y validado estáticamente con ScriptDom; sin ejecutar SQL, tocar aplicación ni iniciar pasos 4/5. Cambios locales previos de usuario excluidos del commit.

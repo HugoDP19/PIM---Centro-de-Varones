@@ -84,6 +84,8 @@ Todas las escrituras, incluido login/logout, requieren `X-SICE-Request: 1`; si e
 
 ## Estructura y pruebas
 
+`database/schema.sql` contiene el diseño físico propuesto para revisión en ERwin: 15 tablas (las 12 originales más HISTORIAL_AULA, ATENCION_MEDIDA e HISTORIAL_MEDIDA), claves, índices y triggers de integridad e historial. Fue analizado con Microsoft ScriptDom sin conectarse a SQL Server ni ejecutar sentencias. Su validación en el motor y la adaptación de la aplicación quedan pendientes; no es una migración ni forma parte del arranque. Incluye Muy Grave y permisos multiaula como requisitos futuros, todavía no implementados en la interfaz/API.
+
 `public/` contiene la interfaz. `src/routes/` define endpoints, `src/controllers/` valida y coordina operaciones, `src/middlewares/auth.js` autentica y restringe roles, `src/services/incidencias.permisos.js` aplica permisos por registro y filtra testigos, y `src/repositories/` mantiene los datos en memoria. `src/config/db.js` conserva el conector mssql para la integración posterior. Dependencias añadidas para autenticación: bcryptjs, jsonwebtoken y cookie-parser.
 
 - `npm test`: pruebas HTTP de los cinco roles, autenticación, usuarios, permisos por registro, confidencialidad y anulación. Usa secretos efímeros y datos de prueba; no lee `.env`.
