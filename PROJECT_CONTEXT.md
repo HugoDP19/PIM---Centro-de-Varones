@@ -1,27 +1,28 @@
 # PROJECT_CONTEXT - SICE-Local
-Última actualización: 2026-10-23 | Paso 3 completado y verificado
+Última actualización: 2026-10-23 | Paso 4 completado y verificado
 
 ## Resumen
 Sistema de convivencia escolar de la I.E. N.° 20874 "Centro de Varones" (San Vicente de Cañete). Registra y da seguimiento a incidencias disciplinarias. Detalle técnico: README.md.
 
 ## Stack
-Node 18+, Express, dotenv, cors, nodemon, bcryptjs, jsonwebtoken y cookie-parser. Frontend en `public/` con Bootstrap 5 + JS vanilla. mysql2 (pool preparado, sin consultas al iniciar ni persistencia implementada). Arquitectura: routes -> controllers -> repositories; middleware de autenticación y servicio de permisos por incidencia.
+Node 18+, Express, dotenv, cors, nodemon, bcryptjs, jsonwebtoken, cookie-parser y pdfkit. Frontend en `public/` con Bootstrap 5 + JS vanilla. mysql2 (pool preparado, sin consultas al iniciar ni persistencia implementada). Arquitectura: routes -> controllers -> repositories; middleware de autenticación y servicios de permisos y PDF.
 
 ## Estado actual
-- Pasos 1–3 terminados. Login/logout, cinco roles y cuentas semilla; gestión de usuarios exclusiva del Administrador. Pestañas, filtros, métricas y modal conservados.
+- Pasos 1–4 terminados. Login/logout, cinco roles y cuentas semilla; gestión de usuarios exclusiva del Administrador. Pestañas, filtros, métricas y modal conservados.
 - Gestión de usuarios revisada: nombres ficticios completos, usuario y rol diferenciados; barra de sesión con nombre y rol; altas siempre activas y activación/desactivación desde la tabla con PUT. Se conserva el estado al editar y la protección del último Administrador activo.
 - JWT en cookie httpOnly, sesiones revocables y hashes bcrypt. API aplica la matriz, filtra registros por autor y oculta identidades confidenciales; la edición no borra los testigos protegidos omitidos por el cliente.
 - Anulación lógica con motivo, responsable, fecha e historial; las incidencias anuladas no admiten cambios ni reapertura. Autor e historial controlados por el servidor.
-- Repositorios de incidencias, usuarios y sesiones en memoria; todo se reinicia con el servidor. Sin PDF ni persistencia SQL.
+- PDF individual desde GET /api/incidencias/:id/pdf y botón en Registros: escudo, contenido registrado, historial/anulación, encabezado, pie con usuario/rol/fecha y paginación. Autorización reutilizada; no se guardan archivos en el servidor.
+- Repositorios de incidencias, usuarios y sesiones en memoria; todo se reinicia con el servidor. Sin persistencia SQL.
 
 ## Siguiente paso
-Paso 4 (PDF): pendiente de autorización expresa. No comenzar automáticamente.
+Paso 5 (integración MySQL): pendiente de autorización expresa. No comenzar automáticamente.
 
 ## Plan (marcar al terminar)
 - [x] 1. Frontend en pestañas dentro de `index.html`: Inicio, Nuevo registro, Registros (Login y Usuarios llegan en el paso 3). Sin páginas separadas mientras los datos estén en memoria.
 - [x] 2. Conectar el frontend con la API (fetch): listar, crear, editar (PUT), cambiar estado (PATCH). El repositorio sigue en memoria.
 - [x] 3. Login y roles, cinco usuarios semilla, bcryptjs, JWT httpOnly y cookie-parser; requiereLogin/requiereRol, Usuarios, protección de testigos y anulación con historial.
-- [ ] 4. PDF por incidencia: `GET /api/incidencias/:id/pdf` con pdfkit (escudo de `images/`, código del caso, pie "Generado por X, fecha y hora"), respetando el rol.
+- [x] 4. PDF por incidencia: `GET /api/incidencias/:id/pdf` con pdfkit, escudo, identificador, pie de generación, paginación y confidencialidad según rol.
 - [ ] 5. Conectar MySQL cuando se autorice: script SQL revisado en MySQL Workbench y repositorios con mysql2. No tocar controladores ni rutas.
 
 ## Roles y permisos
@@ -37,7 +38,7 @@ Roles: Director, Coordinador de Tutoría, Auxiliar, Docente, Administrador.
 | Ver testigos confidenciales | Sí | Sí | No | No | No |
 | Gestionar usuarios | No | No | No | No | Sí |
 Notas: en la fase en memoria "Sus aulas" = todos (depende de ASIGNACION_AULA). Eliminar = anular con motivo; nunca borrar. Estados: Pendiente, En revisión, Atendido (+ Anulado).
-PDF en la matriz es un permiso planificado: todavía no existe endpoint ni botón de descarga.
+PDF aplica la misma visibilidad que la consulta de incidencias, también para las anuladas; Administrador no tiene acceso.
 
 ## Decisiones
 - Pestanas en un solo HTML; los datos ahora viven en el servidor y el frontend mantiene una copia de lectura.
@@ -75,19 +76,21 @@ PDF en la matriz es un permiso planificado: todavía no existe endpoint ni botó
 - `src/validators/incidencias.js`: reglas de entrada compartidas por crear y editar.
 - `src/config/auth.js`, `roles.js`: configuración de sesión y roles; `src/middlewares/auth.js`: login requerido, roles y protección de escrituras.
 - `src/routes/auth.routes.js`, `usuarios.routes.js` y sus controladores; `src/repositories/usuarios.repository.js`, `sesiones.repository.js`: cuentas y sesiones en memoria.
-- `src/services/incidencias.permisos.js`: permisos por registro y presentación sin identidades protegidas.
-- `test/paso3.test.js`: pruebas HTTP; `test/browser.cjs`: prueba opcional con Chrome/Edge instalado, sin dependencias nuevas de pruebas.
+- `src/services/incidencias.permisos.js`: permisos por registro y presentación sin identidades protegidas. Para PDF sustituye también menciones textuales exactas de nombres confidenciales sin modificar el original; no interpreta alusiones indirectas, que deben evitarse en narraciones de acceso general.
+- `src/services/incidencias.pdf.js`: generación PDF en memoria sobre datos ya autorizados, sin lógica de permisos duplicada.
+- `test/paso3.test.js` y `test/pdf.test.js`: pruebas HTTP; `test/browser.cjs`: prueba opcional con Chrome/Edge instalado, sin dependencias nuevas de pruebas.
 - `src/routes/*.js`, `src/controllers/*.js`, `src/repositories/incidencias.repository.js` (datos en memoria).
 - `images/`: escudo (`images/images.jpg`).
 Por tarea: UI -> `public/*`; API -> routes + controllers + repositories de incidencias; login -> archivos nuevos siguiendo el mismo patrón (auth y usuarios) más un middleware; PDF -> controlador de incidencias + servicio nuevo.
 
 ## Verificación y limitaciones
-- npm test: 15 pruebas correctas de permisos de cinco roles, autenticación, usuarios, incidencias e historial; arranque real de Node, health/mysql2 simulado y estructura SQL. Sin consultas a una base real.
-- npm run test:ui: Chrome real, cinco roles, login/logout, registro, edición protegida, filtros, móvil, anulación y usuarios. node --check y git diff --check correctos.
+- npm test: 20 pruebas correctas de permisos de cinco roles, autenticación, usuarios, incidencias e historial; PDF largo, pies, escudo, nombres protegidos, 401/403/404 y fallo 500; arranque real de Node, health/mysql2 simulado y estructura SQL. Sin consultas a una base real.
+- npm run test:ui: Chrome real, cinco roles, login/logout, registro, edición protegida, filtros, móvil, anulación, usuarios, descarga PDF y aviso ante fallo de red. PDF de cinco páginas renderizado y revisado visualmente (encabezado, escudo, pie y texto). node --check y git diff --check correctos.
 - Fuga de iniciarEdicion corregida. Limitaciones previstas: Auxiliar ve todas las aulas; datos y cuentas se restablecen al reiniciar. No usar con datos reales mientras falten persistencia y condiciones de despliegue revisadas.
 - Para ejecución local hay que agregar JWT_SECRET y SEED_PASSWORD privados en .env y ajustar APP_ORIGIN. No se modificó ni versionó .env. Proxy/TLS y asignación de aulas requieren configuración posterior.
 
 ## Bitácora (últimas 10)
+- 2026-10-23: Paso 4 verificado: PDFKit, endpoint protegido y botón de descarga; confidencialidad, paginación y errores probados por HTTP y Chrome. Sin cambios al esquema ni conexión MySQL; Paso 5 pendiente.
 - 2026-10-17: pasos 1 y 2 terminados: pestañas, filtros y frontend conectado a API en memoria.
 - 2026-10-23: Paso 3 y mejora de usuarios verificados por HTTP y Chrome; autenticación, cinco roles, confidencialidad y anulación.
 - 2026-10-23: diseño de 15 tablas y reglas del backend documentados, sin ejecutar ni integrar base de datos.

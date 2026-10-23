@@ -1,6 +1,6 @@
 # SICE-Local — I.E.P. N.° 20874 «Centro de Varones»
 
-Sistema de registro y seguimiento de incidencias de convivencia escolar. Usa Node.js, Express y una interfaz HTML con Bootstrap 5 y JavaScript. Los registros, usuarios, sesiones e historiales viven en memoria del servidor y se pierden al reiniciarlo. MySQL es el motor elegido para la persistencia futura; la conexión de los repositorios y la generación de PDF todavía no están implementadas.
+Sistema de registro y seguimiento de incidencias de convivencia escolar. Usa Node.js, Express y una interfaz HTML con Bootstrap 5 y JavaScript. Genera reportes individuales con PDFKit. Los registros, usuarios, sesiones e historiales viven en memoria del servidor y se pierden al reiniciarlo. MySQL es el motor elegido para la persistencia futura; la conexión de los repositorios todavía no está implementada.
 
 ## Ejecución local
 
@@ -38,6 +38,7 @@ La barra de sesión muestra el nombre completo y el rol. El Administrador crea c
 | --- | --- | --- | --- | --- |
 | Registrar | Sí | Solo Pendiente | Solo Pendiente | No |
 | Ver incidencias | Todas | Todas provisionalmente | Solo las propias | No |
+| Descargar PDF | Todas, incluso anuladas | Las que puede consultar | Solo las propias | No |
 | Editar | Cualquier incidencia no anulada | Propias y Pendiente | Propias y Pendiente | No |
 | Cambiar estado y anular | Sí | No | No | No |
 | Ver testigos confidenciales | Sí | No | No | No |
@@ -52,6 +53,10 @@ La anulación requiere un motivo de hasta 500 caracteres tanto para Director com
 ## Interfaz
 
 El login precede a las pestañas Inicio, Nuevo registro y Registros. El Administrador accede únicamente a Usuarios. Se conserva la navegación por hash y teclado, las métricas, los filtros de texto, estado, grado, tipo y fechas, y el detalle en modal. Las métricas se calculan sobre las incidencias que puede ver la cuenta actual. Las acciones disponibles dependen del permiso devuelto por el servidor.
+
+En Registros, el botón «Descargar PDF» utiliza la sesión activa y muestra un aviso si falla. El backend genera el documento sin guardar archivos: escudo de `images/images.jpg`, datos del caso, personas involucradas, hechos, medidas, observaciones, historial y anulación cuando existen. Incluye encabezado institucional en cada página, numeración y pie con nombre, rol y fecha de generación (America/Lima). Los campos vacíos se indican como «No registrado».
+
+Solo Director y Coordinador reciben identidades de testigos confidenciales en el PDF. Para los demás se muestra «Testigo confidencial» y se sustituyen las menciones exactas de esos nombres en los textos del reporte, sin modificar el registro original. La sustitución no interpreta referencias indirectas: evita escribir datos identificativos de testigos protegidos en las narraciones de acceso general.
 
 ## API
 
@@ -69,6 +74,7 @@ El login precede a las pestañas Inicio, Nuevo registro y Registros. El Administ
 | PUT | `/api/incidencias/:id` | Edita los campos del formulario |
 | PATCH | `/api/incidencias/:id/estado` | Recibe solo `{estadoIncidencia}` |
 | PATCH | `/api/incidencias/:id/anular` | Recibe `{motivo}` y conserva el historial |
+| GET | `/api/incidencias/:id/pdf` | Descarga PDF individual con autorización y confidencialidad del usuario autenticado |
 
 POST de usuarios recibe `nombre` (nombre completo), `usuario`, `rol` y `password`; el servidor asigna siempre `activo: true`. PUT recibe `nombre`, `usuario`, `rol` y `activo` (booleano); `password` es opcional al editar. La tabla utiliza PUT para activar o desactivar y el formulario conserva el estado existente al editar. Los nombres de usuario son únicos, con 3–40 caracteres: minúsculas, números, punto, guion y guion bajo. Las contraseñas se almacenan como hashes bcrypt; nunca se devuelven hashes ni JWT en el JSON.
 
@@ -94,7 +100,9 @@ El frontend carga cuatro scripts con defer, en el orden declarado en index.html:
 
 El backend conserva rutas, controladores y repositorios pequeños. `src/validators/incidencias.js` agrupa las reglas de entrada, `src/middlewares/auth.js` comprueba sesión y roles, y `src/services/incidencias.permisos.js` aplica permisos y confidencialidad por registro. `src/config/db.js` prepara un pool mysql2 reutilizable; ni importar el módulo ni iniciar el servidor abre conexiones. Solo una consulta explícita como /api/health?db=true intentaría conectar.
 
-- `npm test`: pruebas HTTP de los cinco roles, autenticación, usuarios, permisos, confidencialidad y anulación, más verificaciones estáticas del esquema. Comprueba el arranque y simula el conector de salud sin conectarse a MySQL. Usa secretos efímeros y datos de prueba; no lee `.env`.
-- `npm run test:ui`: prueba con Chrome/Edge sin ventana visible, en perfil temporal y servidor aislado. Verifica login/logout, los cinco roles, registro, edición protegida, filtros, vista móvil, anulación y usuarios. Puede indicarse otra instalación mediante `CHROME_PATH`; requiere Node.js 22 o superior.
+`src/services/incidencias.pdf.js` utiliza `pdfkit`, instalado con `npm install`; recibe la incidencia ya filtrada por el servicio de permisos. No requiere programas externos para generar reportes. El endpoint devuelve 401 sin sesión, 403 al Administrador y 404 si la incidencia no existe o no es visible; un fallo de generación devuelve JSON 500 sin una descarga parcial.
+
+- `npm test`: pruebas HTTP de los cinco roles, autenticación, usuarios, permisos, confidencialidad, anulación y PDF (texto largo, paginación, escudo, pie y errores), más verificaciones estáticas del esquema. Comprueba el arranque y simula el conector de salud sin conectarse a MySQL. Usa secretos efímeros y datos de prueba; no lee `.env`.
+- `npm run test:ui`: prueba con Chrome/Edge sin ventana visible, en perfil temporal y servidor aislado. Verifica login/logout, los cinco roles, registro, edición protegida, filtros, vista móvil, anulación, usuarios y descarga PDF real, incluyendo un fallo de red simulado. Los PDF de prueba se guardan en una carpeta temporal. Puede indicarse otra instalación mediante `CHROME_PATH`; requiere Node.js 22 o superior.
 
 Para verificar manualmente: inicia sesión con cada cuenta y compara las acciones con la tabla de permisos; registra y edita un caso con testigo confidencial; anúlalo como supervisor y comprueba el motivo, responsable e historial. Reiniciar el servidor borra los datos y restablece las cinco cuentas semilla.

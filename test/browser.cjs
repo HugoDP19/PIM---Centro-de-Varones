@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
 const { spawn } = require('node:child_process');
-const { mkdtemp, readFile } = require('node:fs/promises');
+const { mkdtemp, readFile, readdir } = require('node:fs/promises');
 const { existsSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
@@ -84,6 +84,8 @@ async function main() {
   }
   await send('Runtime.enable');
   await send('Page.enable');
+  const descargas = await mkdtemp(path.join(tmpdir(), 'sice-pdf-'));
+  await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: descargas });
   await send('Page.navigate', { url: process.env.APP_ORIGIN });
   await waitFor(`typeof bootstrap !== 'undefined' && typeof api === 'function' && !document.querySelector('#app-shell').hidden === false`);
   await login('docente');
@@ -96,12 +98,27 @@ async function main() {
   assert.equal(await evaluate(`JSON.stringify(registros).includes('Testigo UI protegido')`), false);
   await click('#success-alert [data-go-tab]');
   assert.equal(await evaluate('location.hash'), '#registros');
+  await send('Network.enable');
+  await send('Network.setBlockedURLs', { urls: ['*/api/incidencias/*/pdf'] });
+  await click('#record-rows [data-download-pdf]');
+  await waitFor(`apiNotice.textContent.includes('No se pudo descargar el PDF') && !document.querySelector('[data-download-pdf]').disabled`);
+  await send('Network.setBlockedURLs', { urls: [] });
+  await click('#record-rows [data-download-pdf]');
+  let archivoPdf;
+  for (let intento = 0; intento < 100; intento++) {
+    archivoPdf = (await readdir(descargas)).find((nombre) => nombre.endsWith('.pdf'));
+    if (archivoPdf) break;
+    await pause(100);
+  }
+  assert.ok(archivoPdf, 'Chrome debe descargar un PDF con la sesión autenticada');
+  assert.equal((await readFile(path.join(descargas, archivoPdf))).subarray(0, 5).toString(), '%PDF-');
+  await waitFor(`!document.querySelector('[data-download-pdf]').disabled`);
   await click('#record-rows [data-bs-target="#record-detail"]');
   await waitFor(`document.querySelector('#record-detail').classList.contains('show')`);
   assert.ok((await evaluate(`document.querySelector('#detail-content').textContent`)).includes('Testigo confidencial'));
   await evaluate(`bootstrap.Modal.getInstance(document.querySelector('#record-detail')).hide()`);
   await pause(350);
-  await click('#record-rows button:not([data-bs-target])');
+  await click('#record-rows button:not([data-bs-target]):not([data-download-pdf])');
   assert.equal(await evaluate(`testigosInput.value`), '');
   assert.ok(await evaluate(`!!document.querySelector('#protected-witness-note')`));
   await evaluate(`form.elements.observaciones.value = 'Edición sin fuga'`);
@@ -128,7 +145,7 @@ async function main() {
   await evaluate(`document.querySelector('#annul-reason').value = 'Duplicado de prueba UI'`);
   await submit('#annul-form');
   await waitFor(`registros[0]?.estadoIncidencia === 'Anulado'`);
-  assert.equal(await evaluate(`document.querySelectorAll('#record-rows button').length`), 1);
+  assert.equal(await evaluate(`document.querySelectorAll('#record-rows button').length`), 2);
   await logout();
   await login('administrador');
   assert.equal(await evaluate('location.hash'), '#usuarios');
@@ -153,7 +170,7 @@ async function main() {
   assert.equal(await evaluate(`document.activeElement.id`), 'tab-usuarios');
   await logout();
   assert.equal(errors.length, 0, 'No debe haber excepciones JavaScript en el navegador');
-  console.log('OK: navegador real, cinco roles, login/logout, registro, edición confidencial, filtros, móvil, anulación y usuarios.');
+  console.log('OK: Chrome real, cinco roles, login/logout, registro, edición confidencial, filtros, móvil, anulación, usuarios y descarga PDF con manejo de errores.');
 }
 main().catch((error) => { console.error(error.message); process.exitCode = 1; }).finally(async () => {
   socket?.close();

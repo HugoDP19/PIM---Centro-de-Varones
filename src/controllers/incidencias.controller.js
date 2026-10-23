@@ -1,5 +1,6 @@
 const repository = require('../repositories/incidencias.repository');
 const politica = require('../services/incidencias.permisos');
+const { generarPdf } = require('../services/incidencias.pdf');
 const { ESTADOS, validarIncidencia, extraerCampos } = require('../validators/incidencias');
 
 async function list(req, res) {
@@ -70,4 +71,10 @@ async function annul(req, res) {
   };
   res.json(politica.presentar(req.usuario, await repository.actualizar(actual.id, campos)));
 }
-module.exports = { list, create, update, changeStatus, annul };
+async function downloadPdf(req, res) {
+  const registro = await obtenerVisible(req, res);
+  if (!registro) return;
+  const documento = await generarPdf(politica.presentar(req.usuario, registro, true), req.usuario);
+  res.attachment(`incidencia-${registro.id}.pdf`).type('application/pdf').send(documento);
+}
+module.exports = { list, create, update, changeStatus, annul, downloadPdf };

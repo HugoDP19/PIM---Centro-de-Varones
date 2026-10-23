@@ -49,6 +49,38 @@ async function cargarRegistros() {
   renderRecords();
 }
 
+async function descargarPdf(id, boton) {
+  boton.disabled = true;
+  const revision = revisionSesion;
+  apiNotice.className = 'alert alert-info';
+  apiNotice.textContent = 'Preparando PDF...';
+  try {
+    const respuesta = await fetch(`/api/incidencias/${id}/pdf`, { credentials: 'same-origin' });
+    if (revision !== revisionSesion) return;
+    if (!respuesta.ok) {
+      if (respuesta.status === 401) cerrarVista();
+      const error = await respuesta.json().catch(() => null);
+      throw new Error(error?.message || 'No se pudo descargar el PDF.');
+    }
+    if (!respuesta.headers.get('Content-Type')?.includes('application/pdf')) throw new Error('El servidor no devolvió un PDF válido.');
+    const archivo = await respuesta.blob();
+    if (revision !== revisionSesion) return;
+    const url = URL.createObjectURL(archivo);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = `incidencia-${id}.pdf`;
+    document.body.append(enlace);
+    enlace.click();
+    enlace.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    apiNotice.className = 'alert d-none';
+  } catch {
+    mostrarApiError(new Error('No se pudo descargar el PDF. Comprueba tu sesión y vuelve a intentarlo.'));
+  } finally {
+    boton.disabled = false;
+  }
+}
+
 // Inicio, recuperación y cierre de la sesión.
 function esSupervisor() {
   return ['Director', 'Coordinador de Tutoría'].includes(usuarioActual?.rol);

@@ -6,6 +6,7 @@ const { OPERADORES, SUPERVISORES } = require('../config/roles');
 router.use(requiereLogin, requiereRol(...OPERADORES));
 
 router.get('/', controller.list);
+router.get('/:id/pdf', controller.downloadPdf);
 router.post('/', controller.create);
 router.put('/:id', controller.update);
 router.patch('/:id/estado', requiereRol(...SUPERVISORES), controller.changeStatus);

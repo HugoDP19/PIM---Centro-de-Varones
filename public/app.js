@@ -202,6 +202,15 @@ function actionsCell(registro) {
   view.setAttribute('data-bs-target', '#record-detail');
   view.addEventListener('click', () => mostrarDetalle(registro));
   cell.append(view);
+  if (registro.permisos.descargarPdf) {
+    const pdf = document.createElement('button');
+    pdf.type = 'button';
+    pdf.className = 'btn btn-outline-school btn-edit me-2';
+    pdf.textContent = 'Descargar PDF';
+    pdf.dataset.downloadPdf = registro.id;
+    pdf.addEventListener('click', () => descargarPdf(registro.id, pdf));
+    cell.append(pdf);
+  }
   if (registro.permisos.editar) cell.append(button);
   if (registro.permisos.anular) {
     const annul = document.createElement('button');
