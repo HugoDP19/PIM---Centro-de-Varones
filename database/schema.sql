@@ -1,8 +1,8 @@
 -- SICE-Local: MySQL 8.0.16+ y MySQL Workbench. No ejecutado en un servidor.
--- Seleccionar un esquema vac?o en Workbench antes de ejecutar este archivo.
--- Se conservan 15 tablas; los repositorios de la aplicaci?n siguen en memoria.
+-- Seleccionar un esquema vacío en Workbench antes de ejecutar este archivo.
+-- Se conservan 15 tablas; los repositorios de la aplicación siguen en memoria.
 -- UTC para fechas administrativas; calendario local para hechos y vigencias [inicio, fin).
--- Node.js generar? codigo_incidencia antes de insertar; por ejemplo SICE- + UUID.
+-- Node.js generará codigo_incidencia antes de insertar; por ejemplo SICE- + UUID.
 -- Sin triggers ni borrado en cascada. Reglas del backend: VALIDACIONES.md.
 SET NAMES utf8mb4;
 
