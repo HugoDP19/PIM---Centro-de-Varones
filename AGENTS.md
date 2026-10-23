@@ -20,6 +20,7 @@
 - No repitas información que ya está en el contexto.
 - Evita ejecutar comandos innecesarios.
 - Haz cambios mínimos y precisos.
+- Prefiere código sencillo y explicable para un proyecto de instituto; evita complejidad innecesaria.
 - Prefiere respuestas cortas con un resumen de los cambios.
 
 ## Desarrollo
