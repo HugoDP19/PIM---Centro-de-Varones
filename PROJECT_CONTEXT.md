@@ -68,7 +68,7 @@ PDF en la matriz es un permiso planificado: todavía no existe endpoint ni botó
 - `database/schema.sql`: diseño físico propuesto; no ejecutar automáticamente ni confundir con Paso 5 implementado.
 - `database/VALIDACIONES.md`: reglas retiradas de triggers y validaciones futuras de Node.js, con transacciones, concurrencia y confidencialidad; no están integradas en SQL todavía.
 - `public/index.html`: interfaz (métricas, formulario `#record-form`, tabla `#record-rows`).
-- `public/app.js`: estado, pestañas, filtros, tabla y detalle. `formulario.js`: testigos, validación y guardado. `api.js`: fetch/avisos; `usuarios.js`: cuentas; `sesion.js`: login/logout e inicio. Scripts defer en ese orden, sin framework.
+- `public/app.js`: estado, pestañas, filtros, tabla y detalle. `formulario.js`: testigos, validación y guardado. `usuarios.js`: cuentas. `api.js`: fetch/avisos y login/logout, cargado al final para recuperar sesión con toda la pantalla preparada. Cuatro scripts defer en ese orden, sin framework.
 - `public/estilo.css`: estilos (variables --school-red, etc.).
 - `src/app.js` (Express y middlewares) y `src/server.js` (arranque).
 - `src/config/db.js`: pool mysql2 diferido; importar o arrancar no conecta. Health con ?db=true solo a solicitud explícita.
@@ -92,3 +92,4 @@ Por tarea: UI -> `public/*`; API -> routes + controllers + repositories de incid
 - 2026-10-23: Paso 3 y mejora de usuarios verificados por HTTP y Chrome; autenticación, cinco roles, confidencialidad y anulación.
 - 2026-10-23: diseño de 15 tablas y reglas del backend documentados, sin ejecutar ni integrar base de datos.
 - 2026-10-23: motor definitivo MySQL, dependencia anterior sustituida por mysql2; SQL convertido para Workbench. Frontend separado por responsabilidad y validaciones de incidencias aclaradas. Pruebas aisladas, sin avanzar pasos 4/5 ni push.
+- 2026-10-23: sesión y HTTP unificados en public/api.js (114 líneas); retirada carpeta models vacía. Se mantienen las demás separaciones y database/pruebas intactos; 15 pruebas y Chrome correctos, sin referencias rotas ni avance de pasos 4/5.

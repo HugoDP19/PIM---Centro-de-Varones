@@ -90,7 +90,7 @@ Las validaciones de negocio, auditoría y protección de históricos deberán ap
 
 Cuando se autorice la integración, crea un esquema vacío en MySQL Workbench, selecciónalo y abre schema.sql para revisarlo antes de ejecutarlo. Actualmente no se ejecutó en MySQL: solo se analizó su gramática y estructura. Tampoco es una migración de datos ni forma parte del arranque. Muy Grave y permisos multiaula siguen pendientes de integrar en interfaz/API.
 
-El frontend carga scripts sencillos con defer, en el orden declarado en index.html: app.js (estado, navegación, tabla y modales), formulario.js (validación, testigos y guardado), api.js (HTTP y avisos), usuarios.js (gestión de cuentas) y sesion.js (login/logout e inicio). Comparten el estado de la misma pantalla; no hay framework ni compilación.
+El frontend carga cuatro scripts con defer, en el orden declarado en index.html: app.js (estado, navegación, tabla y modales), formulario.js (validación, testigos y guardado), usuarios.js (gestión de cuentas) y api.js (HTTP, avisos y login/logout). api.js se carga al final para recuperar la sesión cuando el resto de la pantalla está preparado. Comparten el estado de la misma pantalla; no hay framework ni compilación.
 
 El backend conserva rutas, controladores y repositorios pequeños. `src/validators/incidencias.js` agrupa las reglas de entrada, `src/middlewares/auth.js` comprueba sesión y roles, y `src/services/incidencias.permisos.js` aplica permisos y confidencialidad por registro. `src/config/db.js` prepara un pool mysql2 reutilizable; ni importar el módulo ni iniciar el servidor abre conexiones. Solo una consulta explícita como /api/health?db=true intentaría conectar.
 
