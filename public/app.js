@@ -3,6 +3,8 @@ let registros = [];
 let usuarioActual = null;
 let revisionSesion = 0;
 let usuarioEditandoId = null;
+let usuarioEditandoActivo = true;
+let usuariosEnviando = false;
 let anulandoId = null;
 
 const form = document.querySelector('#record-form');
@@ -552,7 +554,9 @@ function cerrarVista() {
   renderRecords();
   document.querySelector('#user-rows').replaceChildren();
   document.querySelector('#detail-content').replaceChildren();
-  document.querySelector('#session-user').textContent = '';
+  document.querySelector('#session-name').textContent = '';
+  document.querySelector('#session-role').textContent = '';
+  document.querySelector('#user-total').textContent = '';
   document.querySelector('#annul-form').reset();
   document.querySelector('#login-form').reset();
   successAlert.classList.add('d-none');
@@ -567,7 +571,8 @@ async function abrirSesion(usuario) {
   usuarioActual = usuario;
   const admin = usuario.rol === 'Administrador';
   tabs.forEach((tab) => { tab.hidden = admin ? tab.dataset.tab !== 'usuarios' : tab.dataset.tab === 'usuarios'; });
-  document.querySelector('#session-user').textContent = `${usuario.nombre} — ${usuario.rol}`;
+  document.querySelector('#session-name').textContent = usuario.nombre;
+  document.querySelector('#session-role').textContent = usuario.rol;
   document.querySelector('#login-view').hidden = true;
   document.querySelector('#app-shell').hidden = false;
   form.elements.estadoIncidencia.disabled = !esSupervisor();
@@ -614,10 +619,27 @@ document.querySelector('#annul-form').addEventListener('submit', async (event) =
 });
 function resetUserForm() {
   usuarioEditandoId = null;
+  usuarioEditandoActivo = true;
   document.querySelector('#user-form').reset();
   document.querySelector('#user-password').required = true;
   document.querySelector('#user-heading').textContent = 'Nuevo usuario';
+  document.querySelector('#user-password-label').textContent = 'Contraseña inicial';
+  document.querySelector('#user-password-help').textContent = 'Mínimo 12 caracteres y máximo 72 bytes.';
+  document.querySelector('#user-form-note').textContent = 'Las nuevas cuentas se crean activas. Puedes cambiar su estado desde la tabla.';
   document.querySelector('#user-cancel').hidden = true;
+}
+function bloquearUsuarios(enviando) {
+  usuariosEnviando = enviando;
+  document.querySelectorAll('#user-form button, #user-rows button').forEach((button) => {
+    button.disabled = enviando || button.dataset.ultimoAdmin === 'true';
+  });
+}
+function sesionTrasCambioUsuario(usuario) {
+  if (usuario.id !== usuarioActual?.id) return false;
+  cerrarVista();
+  apiNotice.className = 'alert alert-info';
+  apiNotice.textContent = 'Cuenta actualizada. Inicia sesión nuevamente.';
+  return true;
 }
 async function cargarUsuarios() {
   const revision = revisionSesion;
@@ -625,6 +647,9 @@ async function cargarUsuarios() {
   if (revision !== revisionSesion || usuarioActual?.rol !== 'Administrador') return;
   const rows = document.querySelector('#user-rows');
   rows.replaceChildren();
+  const activos = usuarios.filter((usuario) => usuario.activo).length;
+  const administradores = usuarios.filter((usuario) => usuario.activo && usuario.rol === 'Administrador').length;
+  document.querySelector('#user-total').textContent = `${usuarios.length} usuarios · ${activos} activos`;
   usuarios.forEach((usuario) => {
     const row = document.createElement('tr');
     const action = document.createElement('td');
@@ -633,18 +658,44 @@ async function cargarUsuarios() {
     button.className = 'btn btn-outline-school btn-edit';
     button.textContent = 'Editar';
     button.addEventListener('click', () => {
-      if (document.querySelector('#user-form [type="submit"]').disabled) return;
+      if (usuariosEnviando) return;
       resetUserForm();
       usuarioEditandoId = usuario.id;
       for (const campo of ['nombre', 'usuario', 'rol']) document.querySelector('#user-form').elements[campo].value = usuario[campo];
-      document.querySelector('#user-active').checked = usuario.activo;
+      usuarioEditandoActivo = usuario.activo;
       document.querySelector('#user-password').required = false;
       document.querySelector('#user-heading').textContent = `Editar usuario ${usuario.id}`;
+      document.querySelector('#user-password-label').textContent = 'Nueva contraseña (opcional)';
+      document.querySelector('#user-password-help').textContent = 'Déjala vacía para conservar la contraseña actual.';
+      document.querySelector('#user-form-note').textContent = 'El estado de la cuenta se cambia desde la tabla.';
       document.querySelector('#user-cancel').hidden = false;
       document.querySelector('#user-name').focus();
     });
-    action.append(button);
-    row.append(textCell(usuario.nombre), textCell(usuario.usuario), textCell(usuario.rol), textCell(usuario.activo ? 'Activo' : 'Inactivo'), action);
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'btn btn-outline-school btn-edit';
+    toggle.textContent = usuario.activo ? 'Desactivar' : 'Activar';
+    toggle.setAttribute('aria-label', `${toggle.textContent} a ${usuario.nombre}`);
+    toggle.dataset.ultimoAdmin = String(usuario.activo && usuario.rol === 'Administrador' && administradores === 1);
+    toggle.disabled = usuariosEnviando || toggle.dataset.ultimoAdmin === 'true';
+    if (toggle.dataset.ultimoAdmin === 'true') toggle.title = 'Debe quedar al menos un Administrador activo';
+    toggle.addEventListener('click', async () => {
+      if (usuariosEnviando) return;
+      bloquearUsuarios(true);
+      try {
+        const campos = { nombre: usuario.nombre, usuario: usuario.usuario, rol: usuario.rol, activo: !usuario.activo };
+        const actualizado = await api(`/api/usuarios/${usuario.id}`, 'PUT', campos);
+        if (sesionTrasCambioUsuario(actualizado)) return;
+        if (usuarioEditandoId === actualizado.id) usuarioEditandoActivo = actualizado.activo;
+        await cargarUsuarios();
+      } catch (error) { mostrarApiError(error); }
+      finally { bloquearUsuarios(false); }
+    });
+    const actions = document.createElement('div');
+    actions.className = 'd-flex flex-wrap gap-2';
+    actions.append(button, toggle);
+    action.append(actions);
+    row.append(textCell(usuario.nombre), textCell(usuario.usuario), chipCell(usuario.rol, 'level-chip'), chipCell(usuario.activo ? 'Activo' : 'Inactivo', usuario.activo ? 'health-badge online' : 'health-badge offline'), action);
     rows.append(row);
   });
 }
@@ -652,23 +703,17 @@ document.querySelector('#user-cancel').addEventListener('click', resetUserForm);
 document.querySelector('#user-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const button = event.target.querySelector('[type="submit"]');
-  if (button.disabled) return;
-  button.disabled = true;
-  const cancel = document.querySelector('#user-cancel');
-  cancel.disabled = true;
+  if (usuariosEnviando) return;
+  bloquearUsuarios(true);
   try {
     const campos = Object.fromEntries(new FormData(event.target));
-    campos.activo = document.querySelector('#user-active').checked;
+    if (usuarioEditandoId !== null) campos.activo = usuarioEditandoActivo;
     if (!campos.password && usuarioEditandoId !== null) delete campos.password;
     const usuario = await api(usuarioEditandoId === null ? '/api/usuarios' : `/api/usuarios/${usuarioEditandoId}`, usuarioEditandoId === null ? 'POST' : 'PUT', campos);
     resetUserForm();
-    if (usuario.id === usuarioActual.id) {
-      cerrarVista();
-      apiNotice.className = 'alert alert-info';
-      apiNotice.textContent = 'Cuenta actualizada. Inicia sesión nuevamente.';
-    } else await cargarUsuarios();
+    if (!sesionTrasCambioUsuario(usuario)) await cargarUsuarios();
   } catch (error) { mostrarApiError(error); }
-  finally { button.disabled = false; cancel.disabled = false; }
+  finally { bloquearUsuarios(false); }
 });
 // Recuperar la sesión sin exponer el JWT a JavaScript.
 api('/api/auth/me').then(abrirSesion).catch((error) => {

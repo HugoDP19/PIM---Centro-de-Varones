@@ -74,6 +74,7 @@ async function main() {
     await evaluate(`document.querySelector('#login-user').value = ${JSON.stringify(nombre)}; document.querySelector('#login-password').value = ${JSON.stringify(process.env.SEED_PASSWORD)}`);
     await submit('#login-form');
     await waitFor(`usuarioActual?.usuario === ${JSON.stringify(nombre)} && apiNotice.classList.contains('d-none')`);
+    assert.ok(await evaluate(`document.querySelector('#session-name').textContent === usuarioActual.nombre && usuarioActual.nombre !== usuarioActual.rol && document.querySelector('#session-role').textContent === usuarioActual.rol`));
   }
   async function logout() {
     await click('#logout-button');
@@ -133,13 +134,21 @@ async function main() {
   assert.equal(await evaluate('location.hash'), '#usuarios');
   assert.equal(await evaluate(`document.querySelector('#tab-registros').hidden`), true);
   assert.equal(await evaluate(`document.querySelectorAll('#user-rows tr').length`), 5);
+  assert.equal(await evaluate(`document.querySelector('#user-active') === null`), true);
+  assert.equal(await evaluate(`document.querySelector('#user-password').required`), true);
+  assert.ok(await evaluate(`[...document.querySelectorAll('#user-rows tr')].find(row => row.textContent.includes('administrador')).querySelector('[data-ultimo-admin]').disabled`));
   await evaluate(`Object.entries({ nombre: 'Prueba de usuario UI', usuario: 'usuario.ui', rol: 'Auxiliar', password: ${JSON.stringify(process.env.SEED_PASSWORD)} }).forEach(([key, value]) => { document.querySelector('#user-form').elements[key].value = value; })`);
   await submit('#user-form');
   await waitFor(`document.querySelectorAll('#user-rows tr').length === 6`);
-  await click('#user-rows tr:last-child button');
-  await evaluate(`document.querySelector('#user-active').checked = false`);
-  await submit('#user-form');
+  await click('#user-rows tr:last-child button[data-ultimo-admin]');
   await waitFor(`document.querySelector('#user-rows tr:last-child').textContent.includes('Inactivo')`);
+  await click('#user-rows tr:last-child button:not([data-ultimo-admin])');
+  await evaluate(`document.querySelector('#user-name').value = 'Carlos Mendoza Paredes'`);
+  await submit('#user-form');
+  await waitFor(`document.querySelector('#user-rows tr:last-child').textContent.includes('Carlos Mendoza Paredes') && !usuariosEnviando`);
+  assert.ok(await evaluate(`document.querySelector('#user-rows tr:last-child').textContent.includes('Inactivo')`));
+  await click('#user-rows tr:last-child button[data-ultimo-admin]');
+  await waitFor(`!document.querySelector('#user-rows tr:last-child').textContent.includes('Inactivo') && !usuariosEnviando`);
   await evaluate(`document.querySelector('#tab-usuarios').focus(); document.querySelector('#tab-usuarios').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))`);
   assert.equal(await evaluate(`document.activeElement.id`), 'tab-usuarios');
   await logout();

@@ -2,8 +2,9 @@ const bcrypt = require('bcryptjs');
 const { ROLES } = require('../config/roles');
 const { seedPassword } = require('../config/auth');
 const cuentas = ['director', 'coordinador', 'auxiliar', 'docente', 'administrador'];
+const nombres = ['Ricardo Salazar Mendoza', 'Patricia Huamán Torres', 'Jorge Quispe Ramos', 'Lucía Vargas Flores', 'Andrés Rojas Medina'];
 const usuarios = ROLES.map((rol, index) => ({
-  id: index + 1, usuario: cuentas[index], nombre: rol, rol, activo: true,
+  id: index + 1, usuario: cuentas[index], nombre: nombres[index], rol, activo: true,
   passwordHash: bcrypt.hashSync(seedPassword, 12), version: 1,
 }));
 let siguienteId = usuarios.length + 1;

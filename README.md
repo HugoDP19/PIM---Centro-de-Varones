@@ -22,7 +22,17 @@ node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
 
 ## Acceso y permisos
 
-En cada inicio se crean cinco cuentas: `director`, `coordinador`, `auxiliar`, `docente` y `administrador`, una por rol. Todas toman inicialmente la contraseña de `SEED_PASSWORD`. El Administrador puede crear cuentas, editar nombre, usuario y rol, cambiar contraseñas y activar o desactivar usuarios. No se permite dejar el sistema sin un Administrador activo. Los cambios de cuenta invalidan sus sesiones; estas modificaciones también se pierden al reiniciar.
+En cada inicio se crean cinco cuentas ficticias, con nombre completo, nombre de usuario y rol diferenciados. Todas toman inicialmente la contraseña de `SEED_PASSWORD`.
+
+| Nombre completo ficticio | Usuario | Rol |
+| --- | --- | --- |
+| Ricardo Salazar Mendoza | `director` | Director |
+| Patricia Huamán Torres | `coordinador` | Coordinador de Tutoría |
+| Jorge Quispe Ramos | `auxiliar` | Auxiliar |
+| Lucía Vargas Flores | `docente` | Docente |
+| Andrés Rojas Medina | `administrador` | Administrador |
+
+La barra de sesión muestra el nombre completo y el rol. El Administrador crea cuentas con nombre completo, nombre de usuario, rol y contraseña inicial; quedan activas automáticamente. Puede editar esos datos y activar o desactivar cuentas desde la tabla, sin eliminar usuarios ni sus incidencias. No se permite desactivar ni cambiar de rol al último Administrador activo. Los cambios de cuenta invalidan sus sesiones; estas modificaciones también se pierden al reiniciar.
 
 | Operación | Director / Coordinador de Tutoría | Auxiliar | Docente | Administrador |
 | --- | --- | --- | --- | --- |
@@ -60,7 +70,7 @@ El login precede a las pestañas Inicio, Nuevo registro y Registros. El Administ
 | PATCH | `/api/incidencias/:id/estado` | Recibe solo `{estadoIncidencia}` |
 | PATCH | `/api/incidencias/:id/anular` | Recibe `{motivo}` y conserva el historial |
 
-POST/PUT de usuarios reciben `nombre`, `usuario`, `rol` y `activo` (booleano). `password` es obligatorio al crear y opcional al editar. Los usuarios son únicos, con 3–40 caracteres: minúsculas, números, punto, guion y guion bajo. Las contraseñas se almacenan como hashes bcrypt; nunca se devuelven hashes ni JWT en el JSON.
+POST de usuarios recibe `nombre` (nombre completo), `usuario`, `rol` y `password`; el servidor asigna siempre `activo: true`. PUT recibe `nombre`, `usuario`, `rol` y `activo` (booleano); `password` es opcional al editar. La tabla utiliza PUT para activar o desactivar y el formulario conserva el estado existente al editar. Los nombres de usuario son únicos, con 3–40 caracteres: minúsculas, números, punto, guion y guion bajo. Las contraseñas se almacenan como hashes bcrypt; nunca se devuelven hashes ni JWT en el JSON.
 
 POST/PUT de incidencias reciben `fechaHecho`, `horaHecho`, `grado`, `tipoFalta`, `lugarHecho`, `descripcionHechos`, `nombreReportante`, `origenReporte`, `estadoIncidencia`, `involucrados [{rol, nombre, esConfidencial}]`, `apoderadoAfectado`, `apoderadoInvolucrado`, `medida` y `observaciones`. El servidor controla `id`, `usuarioRegistroId`, `fechaUltimoCambio`, `historial` y `anulacion`. Los campos protegidos del GET marcados con `oculto` no deben reenviarse al editar.
 

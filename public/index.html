@@ -37,7 +37,7 @@
       </section>
       <div id="app-shell" hidden>
       <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-        <span id="session-user"></span><button id="logout-button" type="button" class="btn btn-outline-school">Cerrar sesión</button>
+        <div id="session-user" class="d-flex flex-wrap align-items-center gap-2"><strong id="session-name"></strong><span id="session-role" class="level-chip"></span></div><button id="logout-button" type="button" class="btn btn-outline-school">Cerrar sesión</button>
       </div>
       <nav class="nav nav-tabs mb-4" role="tablist" aria-label="Navegación principal">
         <button class="nav-link" id="tab-inicio" type="button" role="tab" aria-controls="inicio" aria-selected="false" tabindex="-1" data-tab="inicio">Inicio</button>
@@ -280,19 +280,20 @@
         </div>
       </section>
       <section id="usuarios" role="tabpanel" aria-labelledby="tab-usuarios" tabindex="0" hidden>
-        <h2 class="section-heading mb-3">Gestión de usuarios</h2>
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3"><div><div class="section-kicker">Administración</div><h2 class="section-heading">Gestión de usuarios</h2></div><span id="user-total" class="prototype-note" aria-live="polite"></span></div>
         <form id="user-form" class="panel mb-3">
           <h3 id="user-heading" class="form-group-title mb-3">Nuevo usuario</h3>
           <div class="row g-3">
-            <div class="col-12 col-md-6"><label for="user-name" class="form-label">Nombre</label><input id="user-name" name="nombre" class="form-control" maxlength="100" required></div>
-            <div class="col-12 col-md-6"><label for="user-account" class="form-label">Usuario</label><input id="user-account" name="usuario" class="form-control" pattern="[a-z0-9._\-]{3,40}" maxlength="40" autocomplete="off" required></div>
+            <div class="col-12 col-md-6"><label for="user-name" class="form-label">Nombre completo</label><input id="user-name" name="nombre" class="form-control" maxlength="100" placeholder="Nombres y apellidos" required></div>
+            <div class="col-12 col-md-6"><label for="user-account" class="form-label">Nombre de usuario</label><input id="user-account" name="usuario" class="form-control" pattern="[a-z0-9._\-]{3,40}" maxlength="40" autocomplete="off" aria-describedby="user-account-help" required><div id="user-account-help" class="prototype-note mt-1">De 3 a 40 caracteres: minúsculas, números, punto, guion o guion bajo.</div></div>
             <div class="col-12 col-md-6"><label for="user-role" class="form-label">Rol</label><select id="user-role" name="rol" class="form-select" required><option>Director</option><option>Coordinador de Tutoría</option><option>Auxiliar</option><option>Docente</option><option>Administrador</option></select></div>
-            <div class="col-12 col-md-6"><label for="user-password" class="form-label">Contraseña <span class="optional-tag">(al editar, vacía conserva la actual)</span></label><input id="user-password" name="password" type="password" class="form-control" minlength="12" autocomplete="new-password" required></div>
-            <div class="col-12"><div class="form-check"><input id="user-active" name="activo" type="checkbox" class="form-check-input" checked><label for="user-active" class="form-check-label">Activo</label></div></div>
+            <div class="col-12 col-md-6"><label id="user-password-label" for="user-password" class="form-label">Contraseña inicial</label><input id="user-password" name="password" type="password" class="form-control" minlength="12" autocomplete="new-password" aria-describedby="user-password-help" required><div id="user-password-help" class="prototype-note mt-1">Mínimo 12 caracteres y máximo 72 bytes.</div></div>
+            <div class="col-12"><p id="user-form-note" class="prototype-note mb-0">Las nuevas cuentas se crean activas. Puedes cambiar su estado desde la tabla.</p></div>
             <div class="col-12 d-flex gap-2"><button type="submit" class="btn btn-school">Guardar usuario</button><button id="user-cancel" type="button" class="btn btn-outline-school" hidden>Cancelar edición</button></div>
           </div>
         </form>
-        <div class="panel p-0 table-responsive"><table class="table"><thead><tr><th scope="col">Nombre</th><th scope="col">Usuario</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead><tbody id="user-rows"></tbody></table></div>
+        <p class="prototype-note">Activar o desactivar no elimina usuarios ni sus registros. Debe quedar al menos un Administrador activo.</p>
+        <div class="panel p-0 table-responsive"><table class="table table-hover align-middle"><caption class="visually-hidden">Cuentas de usuario y acciones de administración</caption><thead><tr><th scope="col">Nombre completo</th><th scope="col">Nombre de usuario</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead><tbody id="user-rows"></tbody></table></div>
       </section>
       </div>
     </main>

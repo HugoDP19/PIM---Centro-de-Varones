@@ -9,6 +9,7 @@ Node 18+, Express, dotenv, cors, nodemon, bcryptjs, jsonwebtoken y cookie-parser
 
 ## Estado actual
 - Pasos 1–3 terminados. Login/logout, cinco roles y cuentas semilla; gestión de usuarios exclusiva del Administrador. Pestañas, filtros, métricas y modal conservados.
+- Gestión de usuarios revisada: nombres ficticios completos, usuario y rol diferenciados; barra de sesión con nombre y rol; altas siempre activas y activación/desactivación desde la tabla con PUT. Se conserva el estado al editar y la protección del último Administrador activo.
 - JWT en cookie httpOnly, sesiones revocables y hashes bcrypt. API aplica la matriz, filtra registros por autor y oculta identidades confidenciales; la edición no borra los testigos protegidos omitidos por el cliente.
 - Anulación lógica con motivo, responsable, fecha e historial; las incidencias anuladas no admiten cambios ni reapertura. Autor e historial controlados por el servidor.
 - Repositorios de incidencias, usuarios y sesiones en memoria; todo se reinicia con el servidor. Sin PDF ni persistencia SQL.
@@ -78,3 +79,4 @@ Por tarea: UI -> `public/*`; API -> routes + controllers + repositories de incid
 - 2026-10-17: Paso 1 terminado; navegación, filtros y modal sin cambiar objetos ni backend. Contexto inicial recuperado del bloque B adjunto.
 - 2026-10-17: Paso 2 terminado; API completa y frontend conectado. curl: CRUD sin borrado, estados, 400/404 y campos verificados; node --check correcto. Prueba visual en navegador pendiente.
 - 2026-10-23: Paso 3 implementado y verificado por HTTP y navegador; README sin emojis, configuración y pruebas documentadas. Commits locales; sin push ni avance al Paso 4.
+- 2026-10-23: Gestión de usuarios mejorada; pruebas HTTP y Chrome correctas para cinco roles, alta activa, cambio de estado y conservación de incidencias al reactivar. Sin cambios de arquitectura ni avance al Paso 4.
