@@ -1,356 +1,358 @@
--- SICE-Local: modelo para SQL Server 2016 SP1+ y ERwin. No ejecutado.
--- 15 tablas. Las PK, FK, UNIQUE y CHECK protegen los datos de cada registro.
--- Las reglas de negocio y la auditoría se validarán en Node.js: VALIDACIONES.md.
--- La aplicación actual sigue en memoria; esta integración está pendiente.
--- Fechas administrativas: UTC. Vigencias y fecha del hecho: calendario local.
--- Vigencias [inicio, fin): fin exclusivo; NULL cubre el resto del año.
--- No hay borrado en cascada. No se incluyen personas ni documentos ficticios.
--- Estas opciones son necesarias para el código calculado y los UNIQUE filtrados.
+-- SICE-Local: MySQL 8.0.16+ y MySQL Workbench. No ejecutado en un servidor.
+-- Seleccionar un esquema vac?o en Workbench antes de ejecutar este archivo.
+-- Se conservan 15 tablas; los repositorios de la aplicaci?n siguen en memoria.
+-- UTC para fechas administrativas; calendario local para hechos y vigencias [inicio, fin).
+-- Node.js generar? codigo_incidencia antes de insertar; por ejemplo SICE- + UUID.
+-- Sin triggers ni borrado en cascada. Reglas del backend: VALIDACIONES.md.
+SET NAMES utf8mb4;
 
-SET ANSI_NULLS ON;
-SET QUOTED_IDENTIFIER ON;
-SET ANSI_PADDING ON;
-SET ANSI_WARNINGS ON;
-SET CONCAT_NULL_YIELDS_NULL ON;
-SET ARITHABORT ON;
-SET NUMERIC_ROUNDABORT OFF;
-GO
-
-CREATE TABLE dbo.ROL (
-    id_rol INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_ROL PRIMARY KEY,
-    nombre_rol NVARCHAR(50) NOT NULL CONSTRAINT UQ_ROL_nombre UNIQUE,
-    descripcion NVARCHAR(255) NULL,
+CREATE TABLE ROL (
+    id_rol INT NOT NULL AUTO_INCREMENT,
+    nombre_rol VARCHAR(50) NOT NULL,
+    descripcion VARCHAR(255) NULL,
     CONSTRAINT CK_ROL_nombre CHECK (nombre_rol IN
-        (N'Director', N'Coordinador de Tutoría', N'Auxiliar', N'Docente', N'Administrador'))
-);
-GO
+        ('Director', 'Coordinador de Tutoría', 'Auxiliar', 'Docente', 'Administrador')),
+    CONSTRAINT PK_ROL PRIMARY KEY (id_rol),
+    CONSTRAINT UQ_ROL_nombre UNIQUE (nombre_rol)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 -- Únicos datos iniciales: catálogo de los cinco roles, sin personas ni documentos.
-INSERT dbo.ROL (nombre_rol) VALUES (N'Director'), (N'Coordinador de Tutoría'),
-    (N'Auxiliar'), (N'Docente'), (N'Administrador');
-GO
+INSERT ROL (nombre_rol) VALUES ('Director'), ('Coordinador de Tutoría'),
+    ('Auxiliar'), ('Docente'), ('Administrador');
 
-CREATE TABLE dbo.USUARIO (
-    id_usuario INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_USUARIO PRIMARY KEY,
+CREATE TABLE USUARIO (
+    id_usuario INT NOT NULL AUTO_INCREMENT,
     id_rol INT NOT NULL,
-    tipo_documento NVARCHAR(10) COLLATE Latin1_General_100_BIN2 NOT NULL,
-    numero_documento NVARCHAR(20) COLLATE Latin1_General_100_CI_AS NOT NULL,
-    nombre_completo NVARCHAR(100) NOT NULL,
-    username NVARCHAR(40) COLLATE Latin1_General_100_BIN2 NOT NULL,
+    tipo_documento VARCHAR(10) COLLATE utf8mb4_0900_as_cs NOT NULL,
+    numero_documento VARCHAR(20) COLLATE utf8mb4_0900_as_ci NOT NULL,
+    nombre_completo VARCHAR(100) NOT NULL,
+    username VARCHAR(40) COLLATE utf8mb4_0900_as_cs NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    correo NVARCHAR(254) NULL,
-    telefono NVARCHAR(20) NULL,
-    activo BIT NOT NULL CONSTRAINT DF_USUARIO_activo DEFAULT (1),
-    version INT NOT NULL CONSTRAINT DF_USUARIO_version DEFAULT (1),
+    correo VARCHAR(254) NULL,
+    telefono VARCHAR(20) NULL,
+    activo BOOLEAN NOT NULL DEFAULT 1,
+    version INT NOT NULL DEFAULT 1,
     CONSTRAINT UQ_USUARIO_documento UNIQUE (tipo_documento, numero_documento),
     CONSTRAINT CK_USUARIO_documento CHECK (
-        (tipo_documento = N'DNI' AND LEN(numero_documento) = 8
-            AND numero_documento COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^0-9]%')
-        OR (tipo_documento IN (N'CE', N'Pasaporte') AND LEN(numero_documento) BETWEEN 1 AND 20
-            AND numero_documento COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^0-9A-Za-z]%')),
+        (tipo_documento = 'DNI' AND CHAR_LENGTH(numero_documento) = 8
+            AND NOT REGEXP_LIKE(numero_documento, '[^0-9]', 'c'))
+        OR (tipo_documento IN ('CE', 'Pasaporte') AND CHAR_LENGTH(numero_documento) BETWEEN 1 AND 20
+            AND NOT REGEXP_LIKE(numero_documento, '[^0-9A-Za-z]', 'c'))),
     CONSTRAINT CK_USUARIO_documento_espacios CHECK (
-        DATALENGTH(numero_documento) = DATALENGTH(LTRIM(RTRIM(numero_documento)))),
-    CONSTRAINT FK_USUARIO_ROL FOREIGN KEY (id_rol) REFERENCES dbo.ROL (id_rol),
+        OCTET_LENGTH(numero_documento) = OCTET_LENGTH(TRIM(numero_documento))),
+    CONSTRAINT FK_USUARIO_ROL FOREIGN KEY (id_rol) REFERENCES ROL (id_rol),
     CONSTRAINT UQ_USUARIO_username UNIQUE (username),
-    CONSTRAINT CK_USUARIO_username CHECK (LEN(username) BETWEEN 3 AND 40
-        AND username NOT LIKE N'%[^a-z0-9._-]%'
-        AND DATALENGTH(username) = DATALENGTH(LTRIM(RTRIM(username)))),
-    CONSTRAINT CK_USUARIO_nombre CHECK (LEN(LTRIM(RTRIM(nombre_completo))) > 0),
-    CONSTRAINT CK_USUARIO_hash CHECK (LEN(password_hash) >= 60),
-    CONSTRAINT CK_USUARIO_version CHECK (version >= 1)
-);
-GO
+    CONSTRAINT CK_USUARIO_username CHECK (CHAR_LENGTH(username) BETWEEN 3 AND 40
+        AND NOT REGEXP_LIKE(username, '[^a-z0-9._-]', 'c')
+        AND OCTET_LENGTH(username) = OCTET_LENGTH(TRIM(username))),
+    CONSTRAINT CK_USUARIO_nombre CHECK (CHAR_LENGTH(TRIM(nombre_completo)) > 0),
+    CONSTRAINT CK_USUARIO_hash CHECK (CHAR_LENGTH(password_hash) >= 60),
+    CONSTRAINT CK_USUARIO_version CHECK (version >= 1),
+    CONSTRAINT PK_USUARIO PRIMARY KEY (id_usuario),
+    CONSTRAINT CK_USUARIO_activo_boolean CHECK (activo IN (0, 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
-CREATE TABLE dbo.APODERADO (
-    id_apoderado INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_APODERADO PRIMARY KEY,
-    tipo_documento NVARCHAR(10) COLLATE Latin1_General_100_BIN2 NOT NULL,
-    numero_documento NVARCHAR(20) COLLATE Latin1_General_100_CI_AS NOT NULL,
-    nombre_completo NVARCHAR(100) NOT NULL,
-    telefono NVARCHAR(20) NULL,
-    correo NVARCHAR(254) NULL,
-    direccion NVARCHAR(200) NULL,
-    activo BIT NOT NULL CONSTRAINT DF_APODERADO_activo DEFAULT (1),
+CREATE TABLE APODERADO (
+    id_apoderado INT NOT NULL AUTO_INCREMENT,
+    tipo_documento VARCHAR(10) COLLATE utf8mb4_0900_as_cs NOT NULL,
+    numero_documento VARCHAR(20) COLLATE utf8mb4_0900_as_ci NOT NULL,
+    nombre_completo VARCHAR(100) NOT NULL,
+    telefono VARCHAR(20) NULL,
+    correo VARCHAR(254) NULL,
+    direccion VARCHAR(200) NULL,
+    activo BOOLEAN NOT NULL DEFAULT 1,
     CONSTRAINT UQ_APODERADO_documento UNIQUE (tipo_documento, numero_documento),
     CONSTRAINT CK_APODERADO_documento CHECK (
-        (tipo_documento = N'DNI' AND LEN(numero_documento) = 8
-            AND numero_documento COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^0-9]%')
-        OR (tipo_documento IN (N'CE', N'Pasaporte') AND LEN(numero_documento) BETWEEN 1 AND 20
-            AND numero_documento COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^0-9A-Za-z]%')),
+        (tipo_documento = 'DNI' AND CHAR_LENGTH(numero_documento) = 8
+            AND NOT REGEXP_LIKE(numero_documento, '[^0-9]', 'c'))
+        OR (tipo_documento IN ('CE', 'Pasaporte') AND CHAR_LENGTH(numero_documento) BETWEEN 1 AND 20
+            AND NOT REGEXP_LIKE(numero_documento, '[^0-9A-Za-z]', 'c'))),
     CONSTRAINT CK_APODERADO_documento_espacios CHECK (
-        DATALENGTH(numero_documento) = DATALENGTH(LTRIM(RTRIM(numero_documento)))),
-    CONSTRAINT CK_APODERADO_nombre CHECK (LEN(LTRIM(RTRIM(nombre_completo))) > 0)
-);
-GO
+        OCTET_LENGTH(numero_documento) = OCTET_LENGTH(TRIM(numero_documento))),
+    CONSTRAINT CK_APODERADO_nombre CHECK (CHAR_LENGTH(TRIM(nombre_completo)) > 0),
+    CONSTRAINT PK_APODERADO PRIMARY KEY (id_apoderado),
+    CONSTRAINT CK_APODERADO_activo_boolean CHECK (activo IN (0, 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
-CREATE TABLE dbo.ESTUDIANTE (
-    id_estudiante INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_ESTUDIANTE PRIMARY KEY,
-    tipo_documento NVARCHAR(10) COLLATE Latin1_General_100_BIN2 NOT NULL,
-    numero_documento NVARCHAR(20) COLLATE Latin1_General_100_CI_AS NOT NULL,
-    nombre_completo NVARCHAR(100) NOT NULL,
-    direccion NVARCHAR(200) NULL,
-    activo BIT NOT NULL CONSTRAINT DF_ESTUDIANTE_activo DEFAULT (1),
+CREATE TABLE ESTUDIANTE (
+    id_estudiante INT NOT NULL AUTO_INCREMENT,
+    tipo_documento VARCHAR(10) COLLATE utf8mb4_0900_as_cs NOT NULL,
+    numero_documento VARCHAR(20) COLLATE utf8mb4_0900_as_ci NOT NULL,
+    nombre_completo VARCHAR(100) NOT NULL,
+    direccion VARCHAR(200) NULL,
+    activo BOOLEAN NOT NULL DEFAULT 1,
     CONSTRAINT UQ_ESTUDIANTE_documento UNIQUE (tipo_documento, numero_documento),
     CONSTRAINT CK_ESTUDIANTE_documento CHECK (
-        (tipo_documento = N'DNI' AND LEN(numero_documento) = 8
-            AND numero_documento COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^0-9]%')
-        OR (tipo_documento IN (N'CE', N'Pasaporte') AND LEN(numero_documento) BETWEEN 1 AND 20
-            AND numero_documento COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^0-9A-Za-z]%')),
+        (tipo_documento = 'DNI' AND CHAR_LENGTH(numero_documento) = 8
+            AND NOT REGEXP_LIKE(numero_documento, '[^0-9]', 'c'))
+        OR (tipo_documento IN ('CE', 'Pasaporte') AND CHAR_LENGTH(numero_documento) BETWEEN 1 AND 20
+            AND NOT REGEXP_LIKE(numero_documento, '[^0-9A-Za-z]', 'c'))),
     CONSTRAINT CK_ESTUDIANTE_documento_espacios CHECK (
-        DATALENGTH(numero_documento) = DATALENGTH(LTRIM(RTRIM(numero_documento)))),
-    CONSTRAINT CK_ESTUDIANTE_nombre CHECK (LEN(LTRIM(RTRIM(nombre_completo))) > 0)
-);
-GO
+        OCTET_LENGTH(numero_documento) = OCTET_LENGTH(TRIM(numero_documento))),
+    CONSTRAINT CK_ESTUDIANTE_nombre CHECK (CHAR_LENGTH(TRIM(nombre_completo)) > 0),
+    CONSTRAINT PK_ESTUDIANTE PRIMARY KEY (id_estudiante),
+    CONSTRAINT CK_ESTUDIANTE_activo_boolean CHECK (activo IN (0, 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
-CREATE TABLE dbo.AULA (
-    id_aula INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_AULA PRIMARY KEY,
-    nivel NVARCHAR(20) NOT NULL,
+CREATE TABLE AULA (
+    id_aula INT NOT NULL AUTO_INCREMENT,
+    nivel VARCHAR(20) NOT NULL,
     grado TINYINT NOT NULL,
-    seccion NVARCHAR(5) NOT NULL,
-    turno NVARCHAR(10) NOT NULL,
+    seccion VARCHAR(5) NOT NULL,
+    turno VARCHAR(10) NOT NULL,
     anio_academico SMALLINT NOT NULL,
-    activo BIT NOT NULL CONSTRAINT DF_AULA_activo DEFAULT (1),
+    activo BOOLEAN NOT NULL DEFAULT 1,
     CONSTRAINT CK_AULA_nivel_grado CHECK (
-        (nivel = N'Primaria' AND grado BETWEEN 1 AND 6)
-        OR (nivel = N'Secundaria' AND grado BETWEEN 1 AND 5)),
-    CONSTRAINT CK_AULA_seccion CHECK (LEN(LTRIM(RTRIM(seccion))) > 0),
-    CONSTRAINT CK_AULA_turno CHECK (turno IN (N'Mañana', N'Tarde')),
+        (nivel = 'Primaria' AND grado BETWEEN 1 AND 6)
+        OR (nivel = 'Secundaria' AND grado BETWEEN 1 AND 5)),
+    CONSTRAINT CK_AULA_seccion CHECK (CHAR_LENGTH(TRIM(seccion)) > 0),
+    CONSTRAINT CK_AULA_turno CHECK (turno IN ('Mañana', 'Tarde')),
     CONSTRAINT CK_AULA_anio CHECK (anio_academico BETWEEN 1900 AND 9998),
     CONSTRAINT UQ_AULA_periodo UNIQUE (anio_academico, nivel, grado, seccion, turno),
-    CONSTRAINT UQ_AULA_id_anio UNIQUE (id_aula, anio_academico)
-);
-GO
+    CONSTRAINT UQ_AULA_id_anio UNIQUE (id_aula, anio_academico),
+    CONSTRAINT PK_AULA PRIMARY KEY (id_aula),
+    CONSTRAINT CK_AULA_activo_boolean CHECK (activo IN (0, 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
 -- Matrícula anual única: no se guarda un id_aula actual redundante.
-CREATE TABLE dbo.MATRICULA (
-    id_matricula INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_MATRICULA PRIMARY KEY,
+CREATE TABLE MATRICULA (
+    id_matricula INT NOT NULL AUTO_INCREMENT,
     id_estudiante INT NOT NULL,
     id_apoderado_principal INT NOT NULL,
     anio_academico SMALLINT NOT NULL,
-    parentesco NVARCHAR(50) NOT NULL,
+    parentesco VARCHAR(50) NOT NULL,
     fecha_matricula DATE NOT NULL,
-    situacion_matricula NVARCHAR(30) NOT NULL CONSTRAINT DF_MATRICULA_situacion DEFAULT (N'Definitiva'),
-    CONSTRAINT FK_MATRICULA_ESTUDIANTE FOREIGN KEY (id_estudiante) REFERENCES dbo.ESTUDIANTE (id_estudiante),
-    CONSTRAINT FK_MATRICULA_APODERADO FOREIGN KEY (id_apoderado_principal) REFERENCES dbo.APODERADO (id_apoderado),
+    situacion_matricula VARCHAR(30) NOT NULL DEFAULT 'Definitiva',
+    CONSTRAINT FK_MATRICULA_ESTUDIANTE FOREIGN KEY (id_estudiante) REFERENCES ESTUDIANTE (id_estudiante),
+    CONSTRAINT FK_MATRICULA_APODERADO FOREIGN KEY (id_apoderado_principal) REFERENCES APODERADO (id_apoderado),
     CONSTRAINT CK_MATRICULA_anio CHECK (anio_academico BETWEEN 1900 AND 9998),
-    CONSTRAINT CK_MATRICULA_parentesco CHECK (LEN(LTRIM(RTRIM(parentesco))) > 0),
-    CONSTRAINT CK_MATRICULA_situacion CHECK (LEN(LTRIM(RTRIM(situacion_matricula))) > 0),
+    CONSTRAINT CK_MATRICULA_parentesco CHECK (CHAR_LENGTH(TRIM(parentesco)) > 0),
+    CONSTRAINT CK_MATRICULA_situacion CHECK (CHAR_LENGTH(TRIM(situacion_matricula)) > 0),
     CONSTRAINT UQ_MATRICULA_estudiante_anio UNIQUE (id_estudiante, anio_academico),
-    CONSTRAINT UQ_MATRICULA_id_anio UNIQUE (id_matricula, anio_academico)
-);
-GO
+    CONSTRAINT UQ_MATRICULA_id_anio UNIQUE (id_matricula, anio_academico),
+    CONSTRAINT PK_MATRICULA PRIMARY KEY (id_matricula)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
 -- El año compartido por las FK impide mezclar matrículas y aulas de distintos años.
-CREATE TABLE dbo.HISTORIAL_AULA (
-    id_historial_aula INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HISTORIAL_AULA PRIMARY KEY,
+CREATE TABLE HISTORIAL_AULA (
+    id_historial_aula INT NOT NULL AUTO_INCREMENT,
     id_matricula INT NOT NULL,
     id_aula INT NOT NULL,
     anio_academico SMALLINT NOT NULL,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NULL,
+    periodo_abierto TINYINT GENERATED ALWAYS AS
+        (CASE WHEN fecha_fin IS NULL THEN 1 ELSE NULL END) STORED,
+    CONSTRAINT UQ_HA_abierto UNIQUE (id_matricula, periodo_abierto),
     CONSTRAINT FK_HA_MATRICULA FOREIGN KEY (id_matricula, anio_academico)
-        REFERENCES dbo.MATRICULA (id_matricula, anio_academico),
+        REFERENCES MATRICULA (id_matricula, anio_academico),
     CONSTRAINT FK_HA_AULA FOREIGN KEY (id_aula, anio_academico)
-        REFERENCES dbo.AULA (id_aula, anio_academico),
+        REFERENCES AULA (id_aula, anio_academico),
     CONSTRAINT CK_HA_anio CHECK (anio_academico BETWEEN 1900 AND 9998),
     CONSTRAINT CK_HA_periodo CHECK (
-        fecha_inicio >= DATEFROMPARTS(anio_academico,1,1)
-        AND fecha_inicio < DATEFROMPARTS(anio_academico+1,1,1)
+        fecha_inicio >= MAKEDATE(anio_academico, 1)
+        AND fecha_inicio < MAKEDATE(anio_academico+1, 1)
         AND (fecha_fin IS NULL OR (fecha_fin > fecha_inicio
-            AND fecha_fin <= DATEFROMPARTS(anio_academico+1,1,1)))),
-    CONSTRAINT UQ_HA_inicio UNIQUE (id_matricula, fecha_inicio)
-);
-CREATE UNIQUE INDEX UX_HA_abierto ON dbo.HISTORIAL_AULA (id_matricula) WHERE fecha_fin IS NULL;
-GO
+            AND fecha_fin <= MAKEDATE(anio_academico+1, 1)))),
+    CONSTRAINT UQ_HA_inicio UNIQUE (id_matricula, fecha_inicio),
+    CONSTRAINT PK_HISTORIAL_AULA PRIMARY KEY (id_historial_aula)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
-CREATE TABLE dbo.ASIGNACION_AULA (
-    id_asignacion INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_ASIGNACION_AULA PRIMARY KEY,
+CREATE TABLE ASIGNACION_AULA (
+    id_asignacion INT NOT NULL AUTO_INCREMENT,
     id_aula INT NOT NULL,
     id_usuario INT NOT NULL,
     anio_academico SMALLINT NOT NULL,
-    tipo NVARCHAR(20) NOT NULL,
+    tipo VARCHAR(20) NOT NULL,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NULL,
     CONSTRAINT FK_ASIGNACION_AULA FOREIGN KEY (id_aula, anio_academico)
-        REFERENCES dbo.AULA (id_aula, anio_academico),
-    CONSTRAINT FK_ASIGNACION_USUARIO FOREIGN KEY (id_usuario) REFERENCES dbo.USUARIO (id_usuario),
-    CONSTRAINT CK_ASIGNACION_tipo CHECK (tipo IN (N'Tutor', N'Auxiliar')),
+        REFERENCES AULA (id_aula, anio_academico),
+    CONSTRAINT FK_ASIGNACION_USUARIO FOREIGN KEY (id_usuario) REFERENCES USUARIO (id_usuario),
+    CONSTRAINT CK_ASIGNACION_tipo CHECK (tipo IN ('Tutor', 'Auxiliar')),
     CONSTRAINT CK_ASIGNACION_anio CHECK (anio_academico BETWEEN 1900 AND 9998),
     CONSTRAINT CK_ASIGNACION_periodo CHECK (
-        fecha_inicio >= DATEFROMPARTS(anio_academico,1,1)
-        AND fecha_inicio < DATEFROMPARTS(anio_academico+1,1,1)
+        fecha_inicio >= MAKEDATE(anio_academico, 1)
+        AND fecha_inicio < MAKEDATE(anio_academico+1, 1)
         AND (fecha_fin IS NULL OR (fecha_fin > fecha_inicio
-            AND fecha_fin <= DATEFROMPARTS(anio_academico+1,1,1)))),
-    CONSTRAINT UQ_ASIGNACION_inicio UNIQUE (id_usuario, id_aula, tipo, fecha_inicio)
-);
-GO
+            AND fecha_fin <= MAKEDATE(anio_academico+1, 1)))),
+    CONSTRAINT UQ_ASIGNACION_inicio UNIQUE (id_usuario, id_aula, tipo, fecha_inicio),
+    CONSTRAINT PK_ASIGNACION_AULA PRIMARY KEY (id_asignacion)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
 -- Catálogo configurable del sistema; no constituye una clasificación oficial del Minedu.
-CREATE TABLE dbo.TIPO_INCIDENCIA (
-    id_tipo INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_TIPO_INCIDENCIA PRIMARY KEY,
-    gravedad NVARCHAR(20) NOT NULL,
-    denominacion NVARCHAR(100) NOT NULL CONSTRAINT UQ_TIPO_denominacion UNIQUE,
-    descripcion NVARCHAR(1000) NOT NULL,
-    activo BIT NOT NULL CONSTRAINT DF_TIPO_activo DEFAULT (1),
-    CONSTRAINT CK_TIPO_gravedad CHECK (gravedad IN (N'Leve', N'Grave', N'Muy Grave')),
-    CONSTRAINT CK_TIPO_textos CHECK (LEN(LTRIM(RTRIM(denominacion))) > 0 AND LEN(LTRIM(RTRIM(descripcion))) > 0)
-);
-GO
+CREATE TABLE TIPO_INCIDENCIA (
+    id_tipo INT NOT NULL AUTO_INCREMENT,
+    gravedad VARCHAR(20) NOT NULL,
+    denominacion VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(1000) NOT NULL,
+    activo BOOLEAN NOT NULL DEFAULT 1,
+    CONSTRAINT CK_TIPO_gravedad CHECK (gravedad IN ('Leve', 'Grave', 'Muy Grave')),
+    CONSTRAINT CK_TIPO_textos CHECK (CHAR_LENGTH(TRIM(denominacion)) > 0 AND CHAR_LENGTH(TRIM(descripcion)) > 0),
+    CONSTRAINT PK_TIPO_INCIDENCIA PRIMARY KEY (id_tipo),
+    CONSTRAINT UQ_TIPO_denominacion UNIQUE (denominacion),
+    CONSTRAINT CK_TIPO_INCIDENCIA_activo_boolean CHECK (activo IN (0, 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
-CREATE TABLE dbo.INCIDENCIA (
-    id_incidencia INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_INCIDENCIA PRIMARY KEY,
-    codigo_incidencia AS (N'SICE-' + CONVERT(NVARCHAR(20), id_incidencia)) PERSISTED,
+CREATE TABLE INCIDENCIA (
+    id_incidencia INT NOT NULL AUTO_INCREMENT,
+    codigo_incidencia VARCHAR(50) NOT NULL,
     id_tipo INT NOT NULL,
     id_usuario_registro INT NOT NULL,
     id_usuario_modificacion INT NOT NULL,
-    origen_reporte NVARCHAR(50) NOT NULL,
-    nombre_reportante NVARCHAR(150) NOT NULL,
-    tipo_persona_reportante NVARCHAR(30) NOT NULL,
+    origen_reporte VARCHAR(50) NOT NULL,
+    nombre_reportante VARCHAR(150) NOT NULL,
+    tipo_persona_reportante VARCHAR(30) NOT NULL,
     fecha_hecho DATE NOT NULL,
-    hora_hecho TIME(0) NULL,
-    lugar_hecho NVARCHAR(100) NOT NULL,
-    descripcion_hechos NVARCHAR(MAX) NOT NULL,
-    observaciones NVARCHAR(MAX) NULL,
-    estado_incidencia NVARCHAR(30) NOT NULL CONSTRAINT DF_INCIDENCIA_estado DEFAULT (N'Pendiente'),
-    fecha_registro DATETIME2(3) NOT NULL CONSTRAINT DF_INCIDENCIA_registro DEFAULT (SYSUTCDATETIME()),
-    fecha_ultima_modificacion DATETIME2(3) NOT NULL CONSTRAINT DF_INCIDENCIA_modificacion DEFAULT (SYSUTCDATETIME()),
+    hora_hecho TIME NULL,
+    lugar_hecho VARCHAR(100) NOT NULL,
+    descripcion_hechos LONGTEXT NOT NULL,
+    observaciones LONGTEXT NULL,
+    estado_incidencia VARCHAR(30) NOT NULL DEFAULT 'Pendiente',
+    fecha_registro DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    fecha_ultima_modificacion DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     id_usuario_anulacion INT NULL,
-    fecha_anulacion DATETIME2(3) NULL,
-    motivo_anulacion NVARCHAR(500) NULL,
+    fecha_anulacion DATETIME(3) NULL,
+    motivo_anulacion VARCHAR(500) NULL,
     CONSTRAINT UQ_INCIDENCIA_codigo UNIQUE (codigo_incidencia),
-    CONSTRAINT FK_INCIDENCIA_TIPO FOREIGN KEY (id_tipo) REFERENCES dbo.TIPO_INCIDENCIA (id_tipo),
-    CONSTRAINT FK_INCIDENCIA_REGISTRO FOREIGN KEY (id_usuario_registro) REFERENCES dbo.USUARIO (id_usuario),
-    CONSTRAINT FK_INCIDENCIA_MODIFICACION FOREIGN KEY (id_usuario_modificacion) REFERENCES dbo.USUARIO (id_usuario),
-    CONSTRAINT FK_INCIDENCIA_ANULACION FOREIGN KEY (id_usuario_anulacion) REFERENCES dbo.USUARIO (id_usuario),
-    CONSTRAINT CK_INCIDENCIA_estado CHECK (estado_incidencia IN (N'Pendiente', N'En revisión', N'Atendido', N'Anulado')),
+    CONSTRAINT FK_INCIDENCIA_TIPO FOREIGN KEY (id_tipo) REFERENCES TIPO_INCIDENCIA (id_tipo),
+    CONSTRAINT FK_INCIDENCIA_REGISTRO FOREIGN KEY (id_usuario_registro) REFERENCES USUARIO (id_usuario),
+    CONSTRAINT FK_INCIDENCIA_MODIFICACION FOREIGN KEY (id_usuario_modificacion) REFERENCES USUARIO (id_usuario),
+    CONSTRAINT FK_INCIDENCIA_ANULACION FOREIGN KEY (id_usuario_anulacion) REFERENCES USUARIO (id_usuario),
+    CONSTRAINT CK_INCIDENCIA_estado CHECK (estado_incidencia IN ('Pendiente', 'En revisión', 'Atendido', 'Anulado')),
     CONSTRAINT CK_INCIDENCIA_origen CHECK (origen_reporte IN
-        (N'Docente', N'Tutor', N'Auxiliar', N'Directivo', N'Apoderado', N'Otro')),
+        ('Docente', 'Tutor', 'Auxiliar', 'Directivo', 'Apoderado', 'Otro')),
     CONSTRAINT CK_INCIDENCIA_reportante CHECK (tipo_persona_reportante IN
-        (N'Estudiante', N'Docente', N'Padre de Familia', N'Personal', N'Otro')),
-    CONSTRAINT CK_INCIDENCIA_textos CHECK (LEN(LTRIM(RTRIM(nombre_reportante))) > 0
-        AND LEN(LTRIM(RTRIM(lugar_hecho))) > 0 AND LEN(LTRIM(RTRIM(descripcion_hechos))) > 0),
+        ('Estudiante', 'Docente', 'Padre de Familia', 'Personal', 'Otro')),
+    CONSTRAINT CK_INCIDENCIA_textos CHECK (CHAR_LENGTH(TRIM(nombre_reportante)) > 0
+        AND CHAR_LENGTH(TRIM(lugar_hecho)) > 0 AND CHAR_LENGTH(TRIM(descripcion_hechos)) > 0),
     CONSTRAINT CK_INCIDENCIA_fechas CHECK (fecha_ultima_modificacion >= fecha_registro),
     CONSTRAINT CK_INCIDENCIA_anulacion CHECK (
-        (estado_incidencia = N'Anulado' AND id_usuario_anulacion IS NOT NULL
+        (estado_incidencia = 'Anulado' AND id_usuario_anulacion IS NOT NULL
             AND fecha_anulacion IS NOT NULL AND motivo_anulacion IS NOT NULL
-            AND LEN(LTRIM(RTRIM(motivo_anulacion))) > 0 AND fecha_anulacion >= fecha_registro)
-        OR (estado_incidencia <> N'Anulado' AND id_usuario_anulacion IS NULL
-            AND fecha_anulacion IS NULL AND motivo_anulacion IS NULL))
-);
-GO
+            AND CHAR_LENGTH(TRIM(motivo_anulacion)) > 0 AND fecha_anulacion >= fecha_registro)
+        OR (estado_incidencia <> 'Anulado' AND id_usuario_anulacion IS NULL
+            AND fecha_anulacion IS NULL AND motivo_anulacion IS NULL)),
+    CONSTRAINT PK_INCIDENCIA PRIMARY KEY (id_incidencia),
+    CONSTRAINT CK_INCIDENCIA_codigo CHECK (CHAR_LENGTH(TRIM(codigo_incidencia)) > 0),
+    CONSTRAINT CK_INCIDENCIA_hora CHECK (hora_hecho IS NULL OR hora_hecho BETWEEN '00:00:00' AND '23:59:59')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
 -- No se repite id_estudiante: se obtiene por MATRICULA.
-CREATE TABLE dbo.INVOLUCRADO_INCIDENCIA (
-    id_involucrado INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_INVOLUCRADO_INCIDENCIA PRIMARY KEY,
+CREATE TABLE INVOLUCRADO_INCIDENCIA (
+    id_involucrado INT NOT NULL AUTO_INCREMENT,
     id_incidencia INT NOT NULL,
     id_matricula INT NULL,
-    rol_involucrado NVARCHAR(30) NOT NULL,
-    tipo_persona NVARCHAR(30) NOT NULL,
-    nombre_persona NVARCHAR(150) NULL,
-    descargo NVARCHAR(MAX) NULL,
-    es_confidencial BIT NOT NULL CONSTRAINT DF_INV_confidencial DEFAULT (0),
-    activo BIT NOT NULL CONSTRAINT DF_INV_activo DEFAULT (1),
-    CONSTRAINT FK_INV_INCIDENCIA FOREIGN KEY (id_incidencia) REFERENCES dbo.INCIDENCIA (id_incidencia),
-    CONSTRAINT FK_INV_MATRICULA FOREIGN KEY (id_matricula) REFERENCES dbo.MATRICULA (id_matricula),
-    CONSTRAINT CK_INV_rol CHECK (rol_involucrado IN (N'Agresor', N'Afectado', N'Testigo')),
+    rol_involucrado VARCHAR(30) NOT NULL,
+    tipo_persona VARCHAR(30) NOT NULL,
+    nombre_persona VARCHAR(150) NULL,
+    descargo LONGTEXT NULL,
+    es_confidencial BOOLEAN NOT NULL DEFAULT 0,
+    activo BOOLEAN NOT NULL DEFAULT 1,
+    CONSTRAINT FK_INV_INCIDENCIA FOREIGN KEY (id_incidencia) REFERENCES INCIDENCIA (id_incidencia),
+    CONSTRAINT FK_INV_MATRICULA FOREIGN KEY (id_matricula) REFERENCES MATRICULA (id_matricula),
+    CONSTRAINT CK_INV_rol CHECK (rol_involucrado IN ('Agresor', 'Afectado', 'Testigo')),
     CONSTRAINT CK_INV_persona CHECK (
-        (tipo_persona = N'Estudiante' AND id_matricula IS NOT NULL AND nombre_persona IS NULL)
-        OR (tipo_persona IN (N'Docente', N'Padre de Familia', N'Personal', N'Otro')
-            AND id_matricula IS NULL AND nombre_persona IS NOT NULL AND LEN(LTRIM(RTRIM(nombre_persona))) > 0)),
-    CONSTRAINT CK_INV_estudiante CHECK (rol_involucrado = N'Testigo' OR tipo_persona = N'Estudiante'),
-    CONSTRAINT CK_INV_confidencial CHECK (es_confidencial = 0 OR rol_involucrado = N'Testigo')
-);
-CREATE UNIQUE INDEX UX_INV_estudiante_rol ON dbo.INVOLUCRADO_INCIDENCIA (id_incidencia, id_matricula, rol_involucrado)
-    WHERE id_matricula IS NOT NULL;
-GO
+        (tipo_persona = 'Estudiante' AND id_matricula IS NOT NULL AND nombre_persona IS NULL)
+        OR (tipo_persona IN ('Docente', 'Padre de Familia', 'Personal', 'Otro')
+            AND id_matricula IS NULL AND nombre_persona IS NOT NULL AND CHAR_LENGTH(TRIM(nombre_persona)) > 0)),
+    CONSTRAINT CK_INV_estudiante CHECK (rol_involucrado = 'Testigo' OR tipo_persona = 'Estudiante'),
+    CONSTRAINT CK_INV_confidencial CHECK (es_confidencial = 0 OR rol_involucrado = 'Testigo'),
+    CONSTRAINT PK_INVOLUCRADO_INCIDENCIA PRIMARY KEY (id_involucrado),
+    CONSTRAINT CK_INVOLUCRADO_INCIDENCIA_es_confidencial_boolean CHECK (es_confidencial IN (0, 1)),
+    CONSTRAINT CK_INVOLUCRADO_INCIDENCIA_activo_boolean CHECK (activo IN (0, 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
+CREATE UNIQUE INDEX UX_INV_estudiante_rol ON INVOLUCRADO_INCIDENCIA (id_incidencia, id_matricula, rol_involucrado)
+;
 
-CREATE TABLE dbo.HISTORIAL_INCIDENCIA (
-    id_historial BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HISTORIAL_INCIDENCIA PRIMARY KEY,
+CREATE TABLE HISTORIAL_INCIDENCIA (
+    id_historial BIGINT NOT NULL AUTO_INCREMENT,
     id_incidencia INT NOT NULL,
     id_usuario INT NOT NULL,
-    accion NVARCHAR(30) NOT NULL,
-    estado_anterior NVARCHAR(30) NULL,
-    estado_nuevo NVARCHAR(30) NOT NULL,
-    fecha_cambio DATETIME2(3) NOT NULL CONSTRAINT DF_HI_fecha DEFAULT (SYSUTCDATETIME()),
-    motivo NVARCHAR(500) NULL,
-    CONSTRAINT FK_HI_INCIDENCIA FOREIGN KEY (id_incidencia) REFERENCES dbo.INCIDENCIA (id_incidencia),
-    CONSTRAINT FK_HI_USUARIO FOREIGN KEY (id_usuario) REFERENCES dbo.USUARIO (id_usuario),
+    accion VARCHAR(30) NOT NULL,
+    estado_anterior VARCHAR(30) NULL,
+    estado_nuevo VARCHAR(30) NOT NULL,
+    fecha_cambio DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    motivo VARCHAR(500) NULL,
+    CONSTRAINT FK_HI_INCIDENCIA FOREIGN KEY (id_incidencia) REFERENCES INCIDENCIA (id_incidencia),
+    CONSTRAINT FK_HI_USUARIO FOREIGN KEY (id_usuario) REFERENCES USUARIO (id_usuario),
     CONSTRAINT CK_HI_estados CHECK (
-        (estado_anterior IS NULL OR estado_anterior IN (N'Pendiente', N'En revisión', N'Atendido', N'Anulado'))
-        AND estado_nuevo IN (N'Pendiente', N'En revisión', N'Atendido', N'Anulado')),
+        (estado_anterior IS NULL OR estado_anterior IN ('Pendiente', 'En revisión', 'Atendido', 'Anulado'))
+        AND estado_nuevo IN ('Pendiente', 'En revisión', 'Atendido', 'Anulado')),
     CONSTRAINT CK_HI_accion CHECK (
-        (accion = N'Registro' AND estado_anterior IS NULL AND estado_nuevo <> N'Anulado')
-        OR (accion = N'Edición' AND estado_anterior IS NOT NULL AND estado_anterior = estado_nuevo AND estado_nuevo <> N'Anulado')
-        OR (accion = N'Cambio de estado' AND estado_anterior IS NOT NULL AND estado_anterior <> estado_nuevo
-            AND estado_anterior <> N'Anulado' AND estado_nuevo <> N'Anulado')
-        OR (accion = N'Anulación' AND estado_anterior IS NOT NULL AND estado_anterior <> N'Anulado'
-            AND estado_nuevo = N'Anulado' AND motivo IS NOT NULL AND LEN(LTRIM(RTRIM(motivo))) > 0))
-);
-GO
+        (accion = 'Registro' AND estado_anterior IS NULL AND estado_nuevo <> 'Anulado')
+        OR (accion = 'Edición' AND estado_anterior IS NOT NULL AND estado_anterior = estado_nuevo AND estado_nuevo <> 'Anulado')
+        OR (accion = 'Cambio de estado' AND estado_anterior IS NOT NULL AND estado_anterior <> estado_nuevo
+            AND estado_anterior <> 'Anulado' AND estado_nuevo <> 'Anulado')
+        OR (accion = 'Anulación' AND estado_anterior IS NOT NULL AND estado_anterior <> 'Anulado'
+            AND estado_nuevo = 'Anulado' AND motivo IS NOT NULL AND CHAR_LENGTH(TRIM(motivo)) > 0)),
+    CONSTRAINT PK_HISTORIAL_INCIDENCIA PRIMARY KEY (id_historial)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
-CREATE TABLE dbo.MEDIDA_DISCIPLINARIA (
-    id_medida INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_MEDIDA_DISCIPLINARIA PRIMARY KEY,
+CREATE TABLE MEDIDA_DISCIPLINARIA (
+    id_medida INT NOT NULL AUTO_INCREMENT,
     id_involucrado INT NOT NULL,
     id_usuario_responsable INT NOT NULL,
     id_usuario_modificacion INT NOT NULL,
-    tipo_accion NVARCHAR(100) NOT NULL,
-    descripcion NVARCHAR(MAX) NOT NULL,
+    tipo_accion VARCHAR(100) NOT NULL,
+    descripcion LONGTEXT NOT NULL,
     fecha_aplicacion DATE NOT NULL,
-    fecha_citacion DATETIME2(3) NULL,
-    plazo_dias INT NOT NULL CONSTRAINT DF_MEDIDA_plazo DEFAULT (0),
-    estado_cumplimiento NVARCHAR(20) NOT NULL CONSTRAINT DF_MEDIDA_estado DEFAULT (N'Pendiente'),
-    observaciones NVARCHAR(MAX) NULL,
-    fecha_creacion DATETIME2(3) NOT NULL CONSTRAINT DF_MEDIDA_creacion DEFAULT (SYSUTCDATETIME()),
-    fecha_modificacion DATETIME2(3) NOT NULL CONSTRAINT DF_MEDIDA_modificacion DEFAULT (SYSUTCDATETIME()),
-    CONSTRAINT FK_MEDIDA_INV FOREIGN KEY (id_involucrado) REFERENCES dbo.INVOLUCRADO_INCIDENCIA (id_involucrado),
-    CONSTRAINT FK_MEDIDA_RESPONSABLE FOREIGN KEY (id_usuario_responsable) REFERENCES dbo.USUARIO (id_usuario),
-    CONSTRAINT FK_MEDIDA_MODIFICACION FOREIGN KEY (id_usuario_modificacion) REFERENCES dbo.USUARIO (id_usuario),
+    fecha_citacion DATETIME(3) NULL,
+    plazo_dias INT NOT NULL DEFAULT 0,
+    estado_cumplimiento VARCHAR(20) NOT NULL DEFAULT 'Pendiente',
+    observaciones LONGTEXT NULL,
+    fecha_creacion DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    fecha_modificacion DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    CONSTRAINT FK_MEDIDA_INV FOREIGN KEY (id_involucrado) REFERENCES INVOLUCRADO_INCIDENCIA (id_involucrado),
+    CONSTRAINT FK_MEDIDA_RESPONSABLE FOREIGN KEY (id_usuario_responsable) REFERENCES USUARIO (id_usuario),
+    CONSTRAINT FK_MEDIDA_MODIFICACION FOREIGN KEY (id_usuario_modificacion) REFERENCES USUARIO (id_usuario),
     CONSTRAINT CK_MEDIDA_plazo CHECK (plazo_dias >= 0),
-    CONSTRAINT CK_MEDIDA_estado CHECK (estado_cumplimiento IN (N'Pendiente', N'En curso', N'Cumplida', N'Cancelada')),
-    CONSTRAINT CK_MEDIDA_textos CHECK (LEN(LTRIM(RTRIM(tipo_accion))) > 0 AND LEN(LTRIM(RTRIM(descripcion))) > 0),
-    CONSTRAINT CK_MEDIDA_fechas CHECK (fecha_modificacion >= fecha_creacion)
-);
-GO
+    CONSTRAINT CK_MEDIDA_estado CHECK (estado_cumplimiento IN ('Pendiente', 'En curso', 'Cumplida', 'Cancelada')),
+    CONSTRAINT CK_MEDIDA_textos CHECK (CHAR_LENGTH(TRIM(tipo_accion)) > 0 AND CHAR_LENGTH(TRIM(descripcion)) > 0),
+    CONSTRAINT CK_MEDIDA_fechas CHECK (fecha_modificacion >= fecha_creacion),
+    CONSTRAINT PK_MEDIDA_DISCIPLINARIA PRIMARY KEY (id_medida)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
 -- Varias atenciones por medida, con el representante que acudió en cada ocasión.
 -- Nombre y parentesco son instantáneas deliberadas, no sustituyen el catálogo APODERADO.
 -- NULL id_apoderado admite representante distinto del principal, sin inventar documentos.
-CREATE TABLE dbo.ATENCION_MEDIDA (
-    id_atencion INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_ATENCION_MEDIDA PRIMARY KEY,
+CREATE TABLE ATENCION_MEDIDA (
+    id_atencion INT NOT NULL AUTO_INCREMENT,
     id_medida INT NOT NULL,
     id_usuario_atencion INT NOT NULL,
     id_apoderado INT NULL,
-    fecha_atencion DATETIME2(3) NOT NULL CONSTRAINT DF_ATENCION_fecha DEFAULT (SYSUTCDATETIME()),
-    representante_nombre NVARCHAR(150) NOT NULL,
-    representante_parentesco NVARCHAR(50) NOT NULL,
-    acuerdos NVARCHAR(MAX) NOT NULL,
-    observaciones NVARCHAR(MAX) NULL,
-    CONSTRAINT FK_ATENCION_MEDIDA FOREIGN KEY (id_medida) REFERENCES dbo.MEDIDA_DISCIPLINARIA (id_medida),
-    CONSTRAINT FK_ATENCION_USUARIO FOREIGN KEY (id_usuario_atencion) REFERENCES dbo.USUARIO (id_usuario),
-    CONSTRAINT FK_ATENCION_APODERADO FOREIGN KEY (id_apoderado) REFERENCES dbo.APODERADO (id_apoderado),
-    CONSTRAINT CK_ATENCION_textos CHECK (LEN(LTRIM(RTRIM(representante_nombre))) > 0
-        AND LEN(LTRIM(RTRIM(representante_parentesco))) > 0 AND LEN(LTRIM(RTRIM(acuerdos))) > 0)
-);
-GO
+    fecha_atencion DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    representante_nombre VARCHAR(150) NOT NULL,
+    representante_parentesco VARCHAR(50) NOT NULL,
+    acuerdos LONGTEXT NOT NULL,
+    observaciones LONGTEXT NULL,
+    CONSTRAINT FK_ATENCION_MEDIDA FOREIGN KEY (id_medida) REFERENCES MEDIDA_DISCIPLINARIA (id_medida),
+    CONSTRAINT FK_ATENCION_USUARIO FOREIGN KEY (id_usuario_atencion) REFERENCES USUARIO (id_usuario),
+    CONSTRAINT FK_ATENCION_APODERADO FOREIGN KEY (id_apoderado) REFERENCES APODERADO (id_apoderado),
+    CONSTRAINT CK_ATENCION_textos CHECK (CHAR_LENGTH(TRIM(representante_nombre)) > 0
+        AND CHAR_LENGTH(TRIM(representante_parentesco)) > 0 AND CHAR_LENGTH(TRIM(acuerdos)) > 0),
+    CONSTRAINT PK_ATENCION_MEDIDA PRIMARY KEY (id_atencion)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
 -- Node.js debe guardar aquí cada versión de la medida, en la misma transacción.
-CREATE TABLE dbo.HISTORIAL_MEDIDA (
-    id_historial_medida BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_HISTORIAL_MEDIDA PRIMARY KEY,
+CREATE TABLE HISTORIAL_MEDIDA (
+    id_historial_medida BIGINT NOT NULL AUTO_INCREMENT,
     id_medida INT NOT NULL,
     id_usuario_cambio INT NOT NULL,
-    accion NVARCHAR(20) NOT NULL,
-    fecha_cambio DATETIME2(3) NOT NULL CONSTRAINT DF_HM_fecha DEFAULT (SYSUTCDATETIME()),
+    accion VARCHAR(20) NOT NULL,
+    fecha_cambio DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     id_usuario_responsable INT NOT NULL,
-    tipo_accion NVARCHAR(100) NOT NULL,
-    descripcion NVARCHAR(MAX) NOT NULL,
+    tipo_accion VARCHAR(100) NOT NULL,
+    descripcion LONGTEXT NOT NULL,
     fecha_aplicacion DATE NOT NULL,
-    fecha_citacion DATETIME2(3) NULL,
+    fecha_citacion DATETIME(3) NULL,
     plazo_dias INT NOT NULL,
-    estado_cumplimiento NVARCHAR(20) NOT NULL,
-    observaciones NVARCHAR(MAX) NULL,
-    CONSTRAINT FK_HM_MEDIDA FOREIGN KEY (id_medida) REFERENCES dbo.MEDIDA_DISCIPLINARIA (id_medida),
-    CONSTRAINT FK_HM_USUARIO FOREIGN KEY (id_usuario_cambio) REFERENCES dbo.USUARIO (id_usuario),
-    CONSTRAINT FK_HM_RESPONSABLE FOREIGN KEY (id_usuario_responsable) REFERENCES dbo.USUARIO (id_usuario),
-    CONSTRAINT CK_HM_accion CHECK (accion IN (N'Registro', N'Edición')),
-    CONSTRAINT CK_HM_estado CHECK (estado_cumplimiento IN (N'Pendiente', N'En curso', N'Cumplida', N'Cancelada')),
-    CONSTRAINT CK_HM_plazo CHECK (plazo_dias >= 0)
-);
-GO
+    estado_cumplimiento VARCHAR(20) NOT NULL,
+    observaciones LONGTEXT NULL,
+    CONSTRAINT FK_HM_MEDIDA FOREIGN KEY (id_medida) REFERENCES MEDIDA_DISCIPLINARIA (id_medida),
+    CONSTRAINT FK_HM_USUARIO FOREIGN KEY (id_usuario_cambio) REFERENCES USUARIO (id_usuario),
+    CONSTRAINT FK_HM_RESPONSABLE FOREIGN KEY (id_usuario_responsable) REFERENCES USUARIO (id_usuario),
+    CONSTRAINT CK_HM_accion CHECK (accion IN ('Registro', 'Edición')),
+    CONSTRAINT CK_HM_estado CHECK (estado_cumplimiento IN ('Pendiente', 'En curso', 'Cumplida', 'Cancelada')),
+    CONSTRAINT CK_HM_plazo CHECK (plazo_dias >= 0),
+    CONSTRAINT PK_HISTORIAL_MEDIDA PRIMARY KEY (id_historial_medida)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;

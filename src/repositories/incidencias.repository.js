@@ -1,4 +1,4 @@
-// Almacenamiento en memoria; reemplazable por un repositorio SQL Server.
+// Almacenamiento en memoria; reemplazable por un repositorio MySQL.
 const incidencias = [];
 let siguienteId = 1;
 async function listar() { return incidencias; }

@@ -1,15 +1,15 @@
 const { getPool } = require('../config/db');
 
-// GET /api/health  (con ?db=true también verifica SQL Server)
+// GET /api/health no consulta la base. ?db=true es una comprobación opcional de MySQL.
 async function check(req, res) {
   const result = { status: 'ok', service: 'SICE', timestamp: new Date().toISOString() };
 
   if (req.query.db === 'true') {
     try {
-      const pool = await getPool();
-      await pool.request().query('SELECT 1 AS ok');
+      const pool = getPool();
+      await pool.query('SELECT 1 AS ok');
       result.database = 'connected';
-    } catch (err) {
+    } catch {
       result.status = 'error';
       result.database = 'unreachable';
       return res.status(503).json(result);

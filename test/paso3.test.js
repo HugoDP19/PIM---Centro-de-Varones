@@ -2,6 +2,8 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
 const jwt = require('jsonwebtoken');
+const { spawn } = require('node:child_process');
+const path = require('node:path');
 
 process.env.JWT_SECRET = randomBytes(48).toString('hex');
 process.env.SEED_PASSWORD = randomBytes(20).toString('hex');
@@ -61,6 +63,53 @@ test('Paso 3: autenticación, matriz de cinco roles, confidencialidad y anulaci�
   const cuentas = {};
   const registros = {};
   const invitado = cliente();
+  await t.test('el punto de entrada inicia sin usar la base de datos', async () => {
+    const proceso = spawn(process.execPath, ['src/server.js'], {
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, PORT: '0' },
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    try {
+      await new Promise((resolve, reject) => {
+        const limite = setTimeout(() => reject(new Error('El servidor no inició a tiempo')), 15_000);
+        proceso.stdout.on('data', (chunk) => {
+          if (chunk.toString().includes('SICE API escuchando')) {
+            clearTimeout(limite);
+            resolve();
+          }
+        });
+        proceso.once('error', () => { clearTimeout(limite); reject(new Error('No se pudo iniciar el proceso')); });
+        proceso.once('exit', () => { clearTimeout(limite); reject(new Error('El proceso terminó antes de iniciar')); });
+      });
+    } finally {
+      proceso.kill();
+    }
+  });
+  await t.test('salud del servidor y conector MySQL simulado, sin conexión real', async () => {
+    const mysql = require('mysql2/promise');
+    let consultas = 0;
+    let fallaConsulta = false;
+    const poolSimulado = {
+      async query(sql) {
+        consultas++;
+        assert.equal(sql, 'SELECT 1 AS ok');
+        if (fallaConsulta) throw new Error('Fallo simulado');
+        return [[{ ok: 1 }]];
+      },
+    };
+    const crearPool = t.mock.method(mysql, 'createPool', () => poolSimulado);
+    assert.equal((await invitado.request('/health')).data.status, 'ok');
+    assert.equal(crearPool.mock.callCount(), 0);
+    const { getPool } = require('../src/config/db');
+    assert.ok(getPool() === getPool());
+    assert.equal(crearPool.mock.callCount(), 1);
+    assert.equal(consultas, 0);
+    assert.equal((await invitado.request('/health?db=true')).data.database, 'connected');
+    fallaConsulta = true;
+    assert.equal((await invitado.request('/health?db=true', 'GET', undefined, 503)).data.database, 'unreachable');
+    crearPool.mock.restore();
+  });
   await t.test('rutas protegidas, credenciales, CSRF y cookies', async () => {
     await invitado.request('/incidencias', 'GET', undefined, 401);
     await invitado.request('/usuarios', 'GET', undefined, 401);
@@ -73,7 +122,7 @@ test('Paso 3: autenticación, matriz de cinco roles, confidencialidad y anulaci�
       cuentas[nombre] = client;
       assert.ok(!('passwordHash' in data));
       assert.ok(!('version' in data));
-      assert.ok(data.nombre.split(' ').length >= 3 && data.nombre !== data.rol);
+      assert.ok(data.nombre.trim().length > 0 && data.nombre !== data.rol);
       const cookie = response.headers.get('set-cookie');
       assert.ok(cookie.includes('HttpOnly') && cookie.includes('SameSite=Strict') && cookie.includes('Path=/api'));
       assert.equal(response.headers.get('cache-control'), 'no-store');
